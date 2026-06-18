@@ -1,0 +1,19 @@
+{
+  "required": [
+    {"fact": "Linear is a product-development system for human teams and AI agents.", "evidence_ids": ["G001", "G002"]},
+    {"fact": "Its workflow spans intake, planning, building, code review, and monitoring.", "evidence_ids": ["G003"]},
+    {"fact": "Pricing runs from Free through Basic at USD 10, Business at USD 16, and custom Enterprise.", "evidence_ids": ["G004"]},
+    {"fact": "AI and agent capabilities are central to both positioning and higher-tier packaging.", "evidence_ids": ["G002", "G005"]},
+    {"fact": "Linear claims more than 33,000 organizations and publishes customer outcome metrics.", "evidence_ids": ["G007", "G009"]}
+  ],
+  "important": [
+    {"fact": "The product serves startups through enterprises across multiple industries.", "evidence_ids": ["G007", "G008"]},
+    {"fact": "Recent releases indicate rapid expansion into code review, context, and agent workflows.", "evidence_ids": ["G010"]}
+  ],
+  "must_not_claim": [
+    "Linear replaces every software-development tool.",
+    "Linear's customer outcome metrics apply to all customers.",
+    "Linear is the market leader.",
+    "The Enterprise plan has a publicly listed price."
+  ]
+}

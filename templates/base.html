@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ title | default('Competitor Brief') }}</title>
+  <link rel="stylesheet" href="/static/styles.css?v=20260616-1">
+</head>
+<body>
+  <header class="app-header">
+    <a class="brand" href="/tools/competitor-brief" aria-label="Competitor Brief home">
+      <span class="brand-mark">CI</span>
+      <span>
+        <strong>Competitor Intelligence</strong>
+        <small>Public-source dossiers</small>
+      </span>
+    </a>
+    <nav class="top-nav" aria-label="Primary">
+      <a
+        class="{{ 'active' if request.url.path != '/tools/competitor-brief/history' else '' }}"
+        href="/tools/competitor-brief"
+      >Research</a>
+      <a
+        class="{{ 'active' if request.url.path == '/tools/competitor-brief/history' else '' }}"
+        href="/tools/competitor-brief/history"
+      >Library</a>
+      {% if current_user is defined and current_user and current_user.role == "admin" %}
+        <a
+          class="{{ 'active' if request.url.path == '/tools/competitor-brief/admin' else '' }}"
+          href="/tools/competitor-brief/admin"
+        >Admin</a>
+      {% endif %}
+      {% if current_user is defined and current_user %}
+        <form class="nav-logout" method="post" action="/auth/logout">
+          <span>{{ current_user.name }}</span>
+          <button type="submit">Logout</button>
+        </form>
+      {% endif %}
+    </nav>
+  </header>
+  <main class="container">
+    {% if content %}<p>{{ content }}</p>{% endif %}
+    {% block content %}{% endblock %}
+  </main>
+</body>
+</html>

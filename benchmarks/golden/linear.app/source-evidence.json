@@ -1,0 +1,72 @@
+[
+  {
+    "id": "G001",
+    "source_url": "https://linear.app/",
+    "source_title": "Linear",
+    "fact": "Linear positions itself as a product-development system for teams and agents.",
+    "evidence_excerpt": "The product development system for teams and agents"
+  },
+  {
+    "id": "G002",
+    "source_url": "https://linear.app/",
+    "source_title": "Linear",
+    "fact": "Linear differentiates around purpose-built workflows, AI agents, and speed.",
+    "evidence_excerpt": "Built for purpose ... Powered by AI agents ... Designed for speed"
+  },
+  {
+    "id": "G003",
+    "source_url": "https://linear.app/",
+    "source_title": "Linear",
+    "fact": "Its product workflow covers intake, planning, building with agents, code review, and monitoring.",
+    "evidence_excerpt": "Intake ... Plan ... Build ... Diffs ... Monitor"
+  },
+  {
+    "id": "G004",
+    "source_url": "https://linear.app/pricing",
+    "source_title": "Linear Pricing",
+    "fact": "Linear offers Free, Basic at USD 10 per user monthly billed yearly, Business at USD 16, and custom Enterprise.",
+    "evidence_excerpt": "Free $0 ... Basic $10 ... Business $16 ... Enterprise Custom"
+  },
+  {
+    "id": "G005",
+    "source_url": "https://linear.app/pricing",
+    "source_title": "Linear Pricing",
+    "fact": "Business adds agent automations, Code Intelligence, Insights, Asks, and support integrations.",
+    "evidence_excerpt": "Linear Agent automations ... Code Intelligence ... Linear Insights ... Linear Asks"
+  },
+  {
+    "id": "G006",
+    "source_url": "https://linear.app/pricing",
+    "source_title": "Linear Pricing",
+    "fact": "Enterprise adds SAML, SCIM, granular controls, security, onboarding, and account management.",
+    "evidence_excerpt": "SAML and SCIM ... Granular admin controls ... Migration & onboarding support"
+  },
+  {
+    "id": "G007",
+    "source_url": "https://linear.app/customers",
+    "source_title": "Linear Customers",
+    "fact": "Linear says it powers more than 33,000 organizations from startups to major enterprises.",
+    "evidence_excerpt": "Powering more than 33,000 organizations"
+  },
+  {
+    "id": "G008",
+    "source_url": "https://linear.app/customers",
+    "source_title": "Linear Customers",
+    "fact": "Customer stories span SaaS, AI, fintech, consumer, hardware, health, and enterprise segments.",
+    "evidence_excerpt": "SaaS AI Fintech Consumer Hardware Health Enterprise"
+  },
+  {
+    "id": "G009",
+    "source_url": "https://linear.app/customers",
+    "source_title": "Linear Customers",
+    "fact": "Linear publishes outcome claims including faster issue resolution and issues authored by agents.",
+    "evidence_excerpt": "3.3x Faster issue resolution ... 28% Issues authored by agents"
+  },
+  {
+    "id": "G010",
+    "source_url": "https://linear.app/",
+    "source_title": "Linear",
+    "fact": "Linear shows frequent 2026 product releases around documents, diffs, Slack channels, and code intelligence.",
+    "evidence_excerpt": "Team documents ... Linear Diffs ... Project Slack channels ... Code Intelligence"
+  }
+]

@@ -1,0 +1,624 @@
+{% extends "base.html" %}
+{% block content %}
+{% if not report %}
+<section class="hero split-hero">
+  <div class="hero-copy-block">
+    <p class="dossier-kicker">Public-source competitor intelligence</p>
+    <h1>Know what they sell. See where they move.</h1>
+    <p class="hero-copy">
+      Turn a competitor's public website into a concise, cited intelligence dossier.
+    </p>
+  </div>
+  <aside class="trust-card intelligence-rail" aria-label="Reliability rules">
+    <p class="rail-heading">Research protocol</p>
+    <div class="rail-step">
+      <span>01</span>
+      <p><strong>Collect</strong> company-owned public evidence.</p>
+    </div>
+    <div class="rail-step">
+      <span>02</span>
+      <p><strong>Validate</strong> every finding before analysis.</p>
+    </div>
+    <div class="rail-step">
+      <span>03</span>
+      <p><strong>Report</strong> conclusions with traceable sources.</p>
+    </div>
+  </aside>
+</section>
+{% endif %}
+
+<form method="post" class="card form-card {% if report %}compact-form{% endif %}" id="scan-form">
+  <div class="form-intro">
+    <label for="domain">{% if report %}Scan another competitor{% else %}Competitor domain or URL{% endif %}</label>
+    <span>Public pages only</span>
+  </div>
+  <div class="input-row">
+    <input
+      id="domain"
+      name="domain"
+      type="text"
+      inputmode="url"
+      placeholder="https://example.com"
+      value="{{ domain }}"
+      required
+      aria-describedby="domain-help"
+      {% if error %}aria-invalid="true"{% endif %}
+    >
+    <button type="submit" id="submit-button">Generate Snapshot</button>
+  </div>
+  <fieldset class="analysis-choice">
+    <legend>Choose report type</legend>
+    <label class="analysis-option">
+      <input type="radio" name="enable_ai" value="false" checked>
+      <span>
+        <strong>Free report</strong>
+        <small>Deterministic, validated, and source-cited.</small>
+      </span>
+      <b>Free</b>
+    </label>
+    <label class="analysis-option">
+      <input type="radio" name="enable_ai" value="true">
+      <span>
+        <strong>AI analysis</strong>
+        <small>Adds cited strategic analysis after validation.</small>
+      </span>
+      <b>1 credit</b>
+    </label>
+    <p class="analysis-note">
+      AI runs only after validation and only when the configured provider is available.
+      No AI result means no credit should be charged.
+    </p>
+  </fieldset>
+  <p class="hint" id="domain-help">A public-source scan commonly takes 20-60 seconds.</p>
+  <p class="loading-message" id="loading-message" aria-live="polite" hidden>
+    Checking access rules, discovering pages, and simplifying the evidence.
+  </p>
+  <div class="scan-progress" id="scan-progress" hidden aria-hidden="true">
+    <span data-stage="scraping">Collect</span>
+    <span data-stage="classifying">Classify</span>
+    <span data-stage="extracting">Extract</span>
+    <span data-stage="validating">Validate</span>
+  </div>
+</form>
+
+{% if error %}
+  <div class="notice error" role="alert">{{ error }}</div>
+{% endif %}
+
+{% if report %}
+  <article class="profile-sheet" id="profile-report" tabindex="-1" aria-live="polite">
+    <header class="executive-header">
+      <div>
+        <p class="dossier-kicker">Validated intelligence dossier</p>
+        <h1>{{ report.domain }}</h1>
+        <p class="executive-subtitle">
+          Public positioning, offer, commercial signals, and evidence gaps.
+        </p>
+        <p class="meta-line">{{ report.coverage_sentence }} Generated {{ report.generated_label }}.</p>
+        <p class="meta-line report-state-line">
+          <span class="status {{ 'success' if report.workflow_state == 'complete' else 'warning' }}">
+            {{ report.workflow_state.replace("_", " ").title() }}
+          </span>
+          {% if report.ai_analysis %}
+            Evidence verified. AI analysis included.
+          {% elif report.ai_analysis_status in ["failed", "budget_blocked"] %}
+            Verified report ready without AI analysis.
+          {% else %}
+            Evidence verified.
+          {% endif %}
+        </p>
+      </div>
+      <div class="report-actions no-print">
+        <form method="post" action="/tools/competitor-brief/pdf">
+          <input type="hidden" name="domain" value="{{ report.domain }}">
+          <input type="hidden" name="job_id" value="{{ report.job_id }}">
+          <button type="submit">Download dossier</button>
+        </form>
+        <form method="post" action="/tools/competitor-brief/evidence">
+          <input type="hidden" name="domain" value="{{ report.domain }}">
+          <input type="hidden" name="job_id" value="{{ report.job_id }}">
+          <button type="submit" class="secondary-button">Download evidence</button>
+        </form>
+        <button type="button" class="secondary-button" onclick="window.print()">Print</button>
+      </div>
+    </header>
+
+    <section class="dossier-metrics" aria-label="Dossier summary metrics">
+      {% for fact in report.executive.top_metrics %}
+        <div>
+          <strong>{{ fact.value }}</strong>
+          <span>{{ fact.label }}</span>
+        </div>
+      {% endfor %}
+    </section>
+
+    <section class="dossier-card dossier-card-blue">
+      <p class="dossier-section-label">30-second read</p>
+      <p class="dossier-lead">
+        {{ report.executive.at_a_glance }}
+        {% if report.executive.at_a_glance_source_number %}
+          <a href="#source-{{ report.executive.at_a_glance_source_number }}">
+            [{{ report.executive.at_a_glance_source_number }}]
+          </a>
+        {% endif %}
+      </p>
+    </section>
+
+    <section class="dossier-card dossier-card-amber">
+      <p class="dossier-section-label">Strategic read</p>
+      <div>
+        {% set strategic_rendered = false %}
+        {% for section in report.executive.sections %}
+          {% if section.title == "Customer trust and recent activity" and section.points %}
+            {% set strategic_rendered = true %}
+            <p>{{ section.points[0].text }} <a href="#source-{{ section.points[0].source_number }}">[{{ section.points[0].source_number }}]</a></p>
+          {% endif %}
+        {% endfor %}
+        {% if report.executive.unknowns %}
+          <p class="muted-line">Evidence gaps: {{ report.executive.unknowns[:2] | join("; ") }}.</p>
+        {% endif %}
+      </div>
+    </section>
+
+    <section class="dossier-card">
+      <p class="dossier-section-label">Evidence coverage</p>
+      <ul class="clean-list">
+        <li>{{ report.executive.coverage_explained }}</li>
+        <li>{{ report.executive.sources | length }} compact source references cited.</li>
+        {% if report.executive.unknowns %}
+          <li>Not verified: {{ report.executive.unknowns[:2] | join("; ") }}.</li>
+        {% endif %}
+      </ul>
+    </section>
+
+    <section class="dossier-section">
+      <h2>Truth-bounded takeaways</h2>
+      <div class="takeaway-grid">
+        <article>
+          <span>Clear offer</span>
+          {% for section in report.executive.sections %}
+            {% if section.title == "What they offer" %}
+              {% if section.points %}
+                <p>{{ section.points[0].text }} <a href="#source-{{ section.points[0].source_number }}">[{{ section.points[0].source_number }}]</a></p>
+              {% else %}
+                <p>Data unavailable.</p>
+              {% endif %}
+            {% endif %}
+          {% endfor %}
+        </article>
+        <article>
+          <span>Proof depth</span>
+          {% for section in report.executive.sections %}
+            {% if section.title == "Customer trust and recent activity" %}
+              {% if section.points %}
+                <p>{{ section.points[0].text }} <a href="#source-{{ section.points[0].source_number }}">[{{ section.points[0].source_number }}]</a></p>
+              {% else %}
+                <p>No strong public proof signal was validated in this scan.</p>
+              {% endif %}
+            {% endif %}
+          {% endfor %}
+        </article>
+        <article>
+          <span>Buyer risk</span>
+          <p>Claims are useful public-source signals, not independent verification.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="dossier-section">
+      <h2>Product and pricing map</h2>
+      <p class="section-description">
+        The offer map is assembled from validated product, pricing, and positioning evidence.
+      </p>
+      <div class="dossier-table">
+        <div class="dossier-table-row dossier-table-head">
+          <span>Offer signal</span>
+          <span>Observed evidence</span>
+          <span>Read</span>
+        </div>
+        {% for fact in report.executive.quick_facts %}
+          {% if fact.label in ["Products spotted", "Observed prices"] %}
+            <div class="dossier-table-row">
+              <span>{{ fact.label }}</span>
+              <span>{{ fact.value }}</span>
+              <span>Visible public offer signal.</span>
+            </div>
+          {% endif %}
+        {% endfor %}
+        {% for section in report.executive.sections %}
+          {% if section.title == "What they offer" %}
+            {% for point in section.points[:3] %}
+              <div class="dossier-table-row">
+                <span>Public claim</span>
+                <span>{{ point.text }} <a href="#source-{{ point.source_number }}">[{{ point.source_number }}]</a></span>
+                <span>Observed public evidence.</span>
+              </div>
+            {% endfor %}
+          {% endif %}
+        {% endfor %}
+      </div>
+    </section>
+
+    <div class="dossier-two-up">
+      <section class="dossier-section">
+        <h2>What they sell</h2>
+        {% for section in report.executive.sections %}
+          {% if section.title == "What they offer" %}
+            {% if section.points %}
+              <ul class="clean-list">
+                {% for point in section.points[:5] %}
+                  <li>{{ point.text }} <a href="#source-{{ point.source_number }}">[{{ point.source_number }}]</a></li>
+                {% endfor %}
+              </ul>
+            {% else %}
+              <p class="empty-section">Data unavailable.</p>
+            {% endif %}
+          {% endif %}
+        {% endfor %}
+      </section>
+      <section class="dossier-section">
+        <h2>Positioning pattern</h2>
+        {% for section in report.executive.sections %}
+          {% if section.title == "What stands out" %}
+            {% if section.points %}
+              <ul class="clean-list">
+                {% for point in section.points[:5] %}
+                  <li>{{ point.text }} <a href="#source-{{ point.source_number }}">[{{ point.source_number }}]</a></li>
+                {% endfor %}
+              </ul>
+            {% else %}
+              <p class="empty-section">Data unavailable.</p>
+            {% endif %}
+          {% endif %}
+        {% endfor %}
+      </section>
+    </div>
+
+    <section class="dossier-section">
+      <h2>Catalog signals</h2>
+      <div class="dossier-table compact-table">
+        <div class="dossier-table-row dossier-table-head">
+          <span>Signal</span>
+          <span>Visible evidence</span>
+          <span>Source</span>
+        </div>
+        {% for section in report.executive.sections %}
+          {% if section.title in ["What they offer", "What stands out", "Customer trust and recent activity"] %}
+            <div class="dossier-table-row">
+              <span>{{ section.title }}</span>
+              {% if section.points %}
+                <span>{{ section.points[0].text }}</span>
+                <span><a href="#source-{{ section.points[0].source_number }}">[{{ section.points[0].source_number }}]</a></span>
+              {% else %}
+                <span>Data unavailable</span>
+                <span>No source</span>
+              {% endif %}
+            </div>
+          {% endif %}
+        {% endfor %}
+      </div>
+    </section>
+
+    <section class="dossier-section interpretation-section">
+      <h2>Competitive interpretation</h2>
+      <p class="section-description">
+        Reasoned analysis below is constrained by collected public evidence. Unverified areas are labeled as evidence gaps.
+      </p>
+      <div class="interpretation-grid">
+        <article>
+          <span>Strengths</span>
+          {% for section in report.executive.sections %}
+            {% if section.title == "What they offer" and section.points %}
+              <p>{{ section.points[0].text }} <a href="#source-{{ section.points[0].source_number }}">[{{ section.points[0].source_number }}]</a></p>
+            {% endif %}
+          {% endfor %}
+        </article>
+        <article>
+          <span>Weaknesses and gaps</span>
+          <p>{{ report.executive.unknowns[:2] | join("; ") if report.executive.unknowns else "No major evidence gap was surfaced." }}</p>
+        </article>
+        <article>
+          <span>Likely buyer</span>
+          {% for section in report.executive.sections %}
+            {% if section.title == "What stands out" and section.points %}
+              <p>{{ section.points[0].text }} <a href="#source-{{ section.points[0].source_number }}">[{{ section.points[0].source_number }}]</a></p>
+            {% endif %}
+          {% endfor %}
+        </article>
+      </div>
+    </section>
+
+    <section class="dossier-section">
+      <h2>Competitive battlecard</h2>
+      <div class="dossier-table">
+        <div class="dossier-table-row dossier-table-head">
+          <span>Arena</span>
+          <span>Competitor signal</span>
+          <span>Competitive response</span>
+        </div>
+        {% for section in report.executive.sections %}
+          {% if section.title in ["What they offer", "Customer trust and recent activity", "What stands out"] %}
+            <div class="dossier-table-row">
+              <span>{{ "Offer" if section.title == "What they offer" else ("Proof" if section.title == "Customer trust and recent activity" else "Positioning") }}</span>
+              {% if section.points %}
+                <span>{{ section.points[0].text }} <a href="#source-{{ section.points[0].source_number }}">[{{ section.points[0].source_number }}]</a></span>
+              {% else %}
+                <span>Data unavailable.</span>
+              {% endif %}
+              <span>{{ "Compete with clearer proof, sharper packaging, or easier comparison." if section.title == "What they offer" else ("Show customer outcomes, reviews, usage photos, and third-party trust signals." if section.title == "Customer trust and recent activity" else "Make the claim specific, measurable, and easier to verify.") }}</span>
+            </div>
+          {% endif %}
+        {% endfor %}
+      </div>
+    </section>
+
+    {% if report.ai_analysis %}
+      <section class="dossier-section ai-analysis">
+        <p class="dossier-section-label">Evidence-constrained analysis</p>
+        <h2>Strategic analysis</h2>
+        <div class="analysis-grid">
+          {% for title, group in [
+            ("AI summary", report.ai_analysis.summary),
+            ("Differentiators", report.ai_analysis.differentiators),
+            ("Commercial observations", report.ai_analysis.commercial_observations),
+            ("Public signals", report.ai_analysis.public_signals),
+            ("Risks and unknowns", report.ai_analysis.risks_and_unknowns)
+          ] %}
+            <article>
+              <span>{{ title }}</span>
+              {% if group %}
+                {% for statement in group[:2] %}
+                  <p>
+                    {{ statement.text }}
+                    {% for citation_id in statement.citation_ids[:2] %}
+                      <a class="citation-id" href="#evidence-{{ citation_id }}">[{{ citation_id }}]</a>
+                    {% endfor %}
+                  </p>
+                {% endfor %}
+              {% else %}
+                <p>Data unavailable.</p>
+              {% endif %}
+            </article>
+          {% endfor %}
+        </div>
+      </section>
+    {% elif report.ai_analysis_status in ["failed", "budget_blocked"] %}
+      <div class="notice report-note">
+        <strong>Verified report ready without AI analysis.</strong>
+        The cited evidence and deterministic findings remain available.
+      </div>
+    {% endif %}
+
+    <section class="dossier-section">
+      <h2>Evidence ledger</h2>
+      <p class="section-description">
+        Customer-facing citations are compact. Download evidence for the full ledger and full excerpts.
+      </p>
+      <ol class="source-ledger">
+        {% for source in report.executive.sources[:8] %}
+          <li id="source-{{ source.number }}">
+            <span>[{{ source.number }}]</span>
+            <a href="{{ source.url }}" target="_blank" rel="noreferrer">{{ source.label }}</a>
+          </li>
+        {% endfor %}
+      </ol>
+      <p class="methodology-note">{{ report.executive.methodology_note }}</p>
+    </section>
+
+    <section class="dossier-section final-implications">
+      <h2>Competitive implications</h2>
+      <ul class="clean-list">
+        {% for section in report.executive.sections %}
+          {% if section.title == "What they offer" and section.points %}
+            <li>Hardest to beat: {{ section.points[0].text }} <a href="#source-{{ section.points[0].source_number }}">[{{ section.points[0].source_number }}]</a></li>
+          {% endif %}
+        {% endfor %}
+        <li>Easiest to challenge: {{ report.executive.unknowns[:2] | join("; ") if report.executive.unknowns else "proof depth and claim specificity." }}</li>
+        <li>A competitor should show specific evidence, customer outcomes, and clearer proof than the public pages provide.</li>
+      </ul>
+    </section>
+
+    {% if report.job_id %}
+      <section class="feedback-card no-print">
+        <h2>Help improve this report</h2>
+        <form method="post" action="/tools/competitor-brief/jobs/{{ report.job_id }}/feedback">
+          <label for="usefulness-rating">Usefulness</label>
+          <select id="usefulness-rating" name="usefulness_rating" required>
+            <option value="5">5 - Very useful</option>
+            <option value="4">4 - Useful</option>
+            <option value="3">3 - Somewhat useful</option>
+            <option value="2">2 - Limited</option>
+            <option value="1">1 - Not useful</option>
+          </select>
+          <label for="missing-information">What information was missing?</label>
+          <textarea id="missing-information" name="missing_information" rows="3"></textarea>
+          <label class="checkbox-row">
+            <input type="checkbox" name="factual_error" value="true">
+            I noticed a factual error
+          </label>
+          <button type="submit">Save feedback</button>
+        </form>
+      </section>
+    {% endif %}
+
+    <details class="research-details no-print">
+      <summary>Research details and collection diagnostics</summary>
+      {% if report.business_profile %}
+        <h3>Evidence ledger</h3>
+        <div class="diagnostic-list">
+          {% for fact in report.business_profile.facts %}
+            <div class="diagnostic-item" id="evidence-{{ fact.citation_id }}">
+              <strong>{{ fact.citation_id }} | {{ fact.kind.value.replace("_", " ").title() }}</strong>
+              <p>{{ fact.evidence_excerpt }}</p>
+              <a href="{{ fact.source_url }}" target="_blank" rel="noreferrer">
+                {{ fact.source_title or fact.source_url }}
+              </a>
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+      <h3>Collection diagnostics</h3>
+      <div class="diagnostic-list">
+        {% for item in report.diagnostics %}
+          <div class="diagnostic-item">
+            <span class="status {{ item.status_tone }}">{{ item.status_label }}</span>
+            <strong>{{ item.label }}</strong>
+            <p>{{ item.details }}</p>
+            {% if item.source_url %}
+              <a href="{{ item.source_url }}" target="_blank" rel="noreferrer">
+                Open diagnostic source
+              </a>
+            {% endif %}
+          </div>
+        {% endfor %}
+      </div>
+      <h3>Workflow execution</h3>
+      <p>
+        Final state:
+        <span class="status {{ 'success' if report.workflow_state == 'complete' else 'warning' }}">
+          {{ report.workflow_state.replace("_", " ").title() }}
+        </span>
+        Validation: {{ "Ready for report" if report.validation_ready else "Blocked" }}.
+        {{ report.extraction_result_count }} extraction results;
+        {{ report.validated_fact_count }} validated facts.
+      </p>
+      <div class="workflow-grid">
+        {% for stage in report.workflow_stages %}
+          <div class="diagnostic-item">
+            <strong>{{ stage.label }}</strong>
+            <span>{{ stage.duration_label }}</span>
+            <p>{{ stage.detail }}</p>
+          </div>
+        {% endfor %}
+      </div>
+      <h3>Workflow nodes</h3>
+      <div class="workflow-grid">
+        {% for node in report.node_runs %}
+          <div class="diagnostic-item">
+            <span class="status {{ 'success' if node.status == 'Complete' else 'warning' }}">
+              {{ node.status }}
+            </span>
+            <strong>{{ node.label }}</strong>
+            <p>{{ node.failure_policy }} node | {{ node.duration_label }}</p>
+            {% if node.message %}<p>{{ node.message }}</p>{% endif %}
+          </div>
+        {% endfor %}
+      </div>
+      {% if report.validation_issues %}
+        <h3>Validation issues</h3>
+        <div class="diagnostic-list">
+          {% for issue in report.validation_issues %}
+            <div class="diagnostic-item">
+              <span class="status {{ 'blocked' if issue.severity == 'error' else 'warning' }}">
+                {{ issue.severity.title() }}
+              </span>
+              <strong>{{ issue.code.replace("_", " ").title() }}</strong>
+              <p>{{ issue.message }}</p>
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    </details>
+  </article>
+{% endif %}
+
+<script>
+  const scanForm = document.getElementById("scan-form");
+  const submitButton = document.getElementById("submit-button");
+  const loadingMessage = document.getElementById("loading-message");
+  const scanProgress = document.getElementById("scan-progress");
+  const profileReport = document.getElementById("profile-report");
+  const aiChoices = document.querySelectorAll('input[name="enable_ai"]');
+
+  const updateSubmitLabel = () => {
+    const selected = document.querySelector('input[name="enable_ai"]:checked');
+    submitButton.textContent = selected && selected.value === "true"
+      ? "Generate with AI - 1 credit"
+      : "Generate free report";
+  };
+
+  aiChoices.forEach((choice) => {
+    choice.addEventListener("change", updateSubmitLabel);
+  });
+  updateSubmitLabel();
+
+  const failResearchJob = (message) => {
+    scanForm.removeAttribute("aria-busy");
+    submitButton.disabled = false;
+    updateSubmitLabel();
+    scanProgress.hidden = true;
+    loadingMessage.classList.add("error");
+    loadingMessage.setAttribute("role", "alert");
+    loadingMessage.hidden = false;
+    loadingMessage.textContent = message;
+  };
+
+  scanForm.addEventListener("submit", async (event) => {
+    if (!window.fetch) return;
+    event.preventDefault();
+    scanForm.setAttribute("aria-busy", "true");
+    submitButton.disabled = true;
+    submitButton.textContent = "Scanning...";
+    loadingMessage.hidden = false;
+    loadingMessage.classList.remove("error");
+    loadingMessage.removeAttribute("role");
+    loadingMessage.textContent =
+      "Starting a fresh research run. The previous report is hidden while this scan completes.";
+    scanProgress.hidden = false;
+    if (profileReport) {
+      profileReport.hidden = true;
+    }
+    try {
+      const response = await fetch("/tools/competitor-brief/jobs", {
+        method: "POST",
+        body: new FormData(scanForm)
+      });
+      if (!response.ok) {
+        const failure = await response.json().catch(() => ({}));
+        throw new Error(failure.detail || "Could not create research job.");
+      }
+      const job = await response.json();
+      const poll = async () => {
+        try {
+          const statusResponse = await fetch(`/tools/competitor-brief/jobs/${job.job_id}`);
+          if (!statusResponse.ok) throw new Error("Could not read research job status.");
+          const current = await statusResponse.json();
+          loadingMessage.textContent =
+            `Research status: ${current.status.replace("_", " ")}. ` +
+            `${current.fact_count} validated facts so far.`;
+          const stages = ["scraping", "classifying", "extracting", "validating"];
+          const currentStage = current.workflow ? current.workflow.state : current.status;
+          const currentIndex = stages.indexOf(currentStage);
+          scanProgress.querySelectorAll("span").forEach((item, index) => {
+            item.classList.toggle(
+              "active",
+              index <= currentIndex || ["complete", "partial"].includes(current.status)
+            );
+          });
+          if (
+            (current.status === "complete" || current.status === "partial") &&
+            current.has_snapshot
+          ) {
+            window.location.assign(`/tools/competitor-brief/jobs/${job.job_id}/report`);
+            return;
+          }
+          if (current.status === "failed") {
+            failResearchJob(current.error || "Research job failed.");
+            return;
+          }
+          window.setTimeout(() => void poll(), 700);
+        } catch (error) {
+          failResearchJob(error.message);
+        }
+      };
+      void poll();
+    } catch (error) {
+      failResearchJob(error.message);
+    }
+  });
+
+  if (profileReport) {
+    profileReport.focus();
+  }
+</script>
+{% endblock %}

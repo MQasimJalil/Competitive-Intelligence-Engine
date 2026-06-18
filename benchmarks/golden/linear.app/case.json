@@ -1,0 +1,13 @@
+{
+  "domain": "linear.app",
+  "industry": "product-development SaaS",
+  "reviewed_at": "2026-06-10",
+  "report_type": "public-source competitor profile",
+  "scoring_weights": {
+    "required_fact_recall": 0.30,
+    "citation_correctness": 0.25,
+    "unsupported_claim_avoidance": 0.20,
+    "evidence_prioritization": 0.15,
+    "readability": 0.10
+  }
+}

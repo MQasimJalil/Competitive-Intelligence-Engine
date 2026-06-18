@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% block content %}
+<header class="admin-masthead">
+  <div>
+    <p class="dossier-kicker">Private administration</p>
+    <h1>Operations dashboard</h1>
+    <p>
+      User usage, report volume, and estimated provider spend. Report subjects are hidden.
+    </p>
+  </div>
+  <a class="button-link" href="/tools/competitor-brief">New research run</a>
+</header>
+
+<section class="admin-metrics" aria-label="Operations summary">
+  <div><strong>{{ summary.total_users }}</strong><span>Users</span></div>
+  <div><strong>{{ summary.total_reports }}</strong><span>Total reports</span></div>
+  <div><strong>{{ summary.complete_reports }}</strong><span>Complete</span></div>
+  <div><strong>{{ summary.ai_successes }}/{{ summary.ai_requested }}</strong><span>AI successes</span></div>
+  <div><strong>${{ "%.4f"|format(summary.total_ai_cost_usd) }}</strong><span>Total AI cost</span></div>
+  <div><strong>${{ "%.4f"|format(summary.total_apify_cost_usd) }}</strong><span>Total Apify cost</span></div>
+</section>
+
+<section class="admin-privacy-note">
+  <strong>Privacy rule</strong>
+  <p>
+    Admins can see users, counts, and costs. Competitor domains, report contents, evidence,
+    and direct report links are intentionally not shown here.
+  </p>
+</section>
+
+<section class="admin-user-panel">
+  <div>
+    <p class="dossier-kicker">Tester access</p>
+    <h2>Add user</h2>
+    <p class="muted-line">Create named accounts for internal testers or another admin.</p>
+    {% if user_error %}
+      <div class="notice error">{{ user_error }}</div>
+    {% endif %}
+  </div>
+  <form method="post" action="/tools/competitor-brief/admin/users" class="admin-user-form">
+    <label for="name">Name</label>
+    <input id="name" name="name" type="text" autocomplete="name" required>
+
+    <label for="email">Email</label>
+    <input id="email" name="email" type="email" autocomplete="email" required>
+
+    <label for="password">Temporary password</label>
+    <input id="password" name="password" type="password" autocomplete="new-password" required>
+
+    <label for="role">Role</label>
+    <select id="role" name="role">
+      <option value="tester">Tester</option>
+      <option value="admin">Admin</option>
+    </select>
+
+    <button type="submit">Create user</button>
+  </form>
+</section>
+
+<section class="admin-table-wrap">
+  <table class="admin-table">
+    <thead>
+      <tr>
+        <th>User</th>
+        <th>Reports</th>
+        <th>Status mix</th>
+        <th>AI usage</th>
+        <th>AI cost</th>
+        <th>Apify cost</th>
+        <th>Total cost</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for user in users %}
+      <tr>
+        <td>
+          <strong>{{ user.name }}</strong>
+          <small>{{ user.email or user.owner_id }} · {{ user.role }}</small>
+        </td>
+        <td>{{ user.total_reports }}</td>
+        <td>
+          {{ user.complete_reports }} complete<br>
+          <small>{{ user.partial_reports }} partial / {{ user.failed_reports }} failed</small>
+        </td>
+        <td>{{ user.ai_successes }}/{{ user.ai_requested }} successes</td>
+        <td>${{ "%.4f"|format(user.total_ai_cost_usd) }}</td>
+        <td>${{ "%.4f"|format(user.total_apify_cost_usd) }}</td>
+        <td><strong>${{ "%.4f"|format(user.total_estimated_cost_usd) }}</strong></td>
+      </tr>
+      {% else %}
+      <tr><td colspan="7">No user activity recorded.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endblock %}

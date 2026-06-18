@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% block content %}
+{% set summary = namespace(complete=0, partial=0, active=0, facts=0) %}
+{% for job in jobs %}
+  {% set summary.facts = summary.facts + job.fact_count %}
+  {% if job.status.value == 'complete' %}
+    {% set summary.complete = summary.complete + 1 %}
+  {% elif job.status.value == 'partial' %}
+    {% set summary.partial = summary.partial + 1 %}
+  {% elif job.status.value in ['pending', 'running'] %}
+    {% set summary.active = summary.active + 1 %}
+  {% endif %}
+{% endfor %}
+
+<section class="hero history-hero">
+  <div>
+    <p class="dossier-kicker">Intelligence archive</p>
+    <h1>Dossier library</h1>
+    <p class="hero-copy">Reopen verified research, inspect evidence, or commission a new dossier.</p>
+  </div>
+  <a class="button-link history-primary-action" href="/tools/competitor-brief">New snapshot</a>
+</section>
+
+<section class="history-summary" aria-label="Report history summary">
+  <div><strong>{{ jobs | length }}</strong><span>Total reports</span></div>
+  <div><strong>{{ summary.complete }}</strong><span>Complete</span></div>
+  <div><strong>{{ summary.partial + summary.active }}</strong><span>Needs attention</span></div>
+  <div><strong>{{ summary.facts }}</strong><span>Validated facts</span></div>
+</section>
+
+<div class="history-grid" aria-label="Saved reports">
+  {% for job in jobs %}
+    <article class="card history-card">
+      <div class="history-card-main">
+        <span class="status {{ 'success' if job.status.value == 'complete' else 'warning' }}">
+          {{ job.status.value.replace("_", " ").title() }}
+        </span>
+        <h2>{{ job.domain }}</h2>
+      </div>
+      <dl class="history-metadata">
+        <div><dt>Evidence</dt><dd>{{ job.fact_count }} facts</dd></div>
+        <div>
+          <dt>Report type</dt>
+          <dd>
+            {% if job.ai_requested is sameas true %}
+              AI requested · 1 credit
+            {% elif job.ai_requested is sameas false %}
+              Free report
+            {% else %}
+              Legacy report
+            {% endif %}
+          </dd>
+        </div>
+        <div><dt>Retention</dt><dd>Until {{ job.expires_at.strftime("%Y-%m-%d") }}</dd></div>
+      </dl>
+      <div class="history-actions">
+        {% if job.has_snapshot %}
+          <a class="button-link" href="/tools/competitor-brief/jobs/{{ job.job_id }}/report">
+            Open report
+          </a>
+        {% endif %}
+        <form method="post" action="/tools/competitor-brief/jobs/{{ job.job_id }}/delete">
+          <button type="submit" class="secondary-button">Delete</button>
+        </form>
+      </div>
+    </article>
+  {% else %}
+    <div class="history-empty">
+      <p class="eyebrow">Workspace ready</p>
+      <h2>No saved reports yet</h2>
+      <p>Generate a competitor snapshot to build your research library.</p>
+      <a class="button-link" href="/tools/competitor-brief">Generate first snapshot</a>
+    </div>
+  {% endfor %}
+</div>
+{% endblock %}

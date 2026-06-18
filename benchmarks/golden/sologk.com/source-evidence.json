@@ -1,0 +1,72 @@
+[
+  {
+    "id": "G001",
+    "source_url": "https://sologk.com/",
+    "source_title": "SOLOGK.COM",
+    "fact": "SoloGK positions its gloves as professional equipment that becomes an extension of a goalkeeper's skills.",
+    "evidence_excerpt": "Our Goalkeeper Gloves are more than just equipment they are extension of your skills"
+  },
+  {
+    "id": "G002",
+    "source_url": "https://sologk.com/",
+    "source_title": "SOLOGK.COM",
+    "fact": "SoloGK describes itself as a UK-based brand focused on making professional-grade equipment accessible without very high prices.",
+    "evidence_excerpt": "UK-based brand ... price and quality are at the forefront of our mission"
+  },
+  {
+    "id": "G003",
+    "source_url": "https://sologk.com/",
+    "source_title": "SOLOGK.COM",
+    "fact": "The storefront organizes products into Eclipse, Lunar, Vortex, Cobra, and Viper collections.",
+    "evidence_excerpt": "Shop by collection: Eclipse, Lunar, Vortex, Cobra, Viper"
+  },
+  {
+    "id": "G004",
+    "source_url": "https://sologk.com/",
+    "source_title": "SOLOGK.COM",
+    "fact": "Visible featured-product prices range from GBP 25 for Cobra Junior to GBP 40 for Lunar 2.",
+    "evidence_excerpt": "COBRA JUNIOR £25.00 ... LUNAR 2 £40.00"
+  },
+  {
+    "id": "G005",
+    "source_url": "https://sologk.com/",
+    "source_title": "SOLOGK.COM",
+    "fact": "SoloGK emphasizes professional-grade Contact latex and superior dry- and wet-weather grip.",
+    "evidence_excerpt": "professional-grade Contact latex that offers superior grip in both dry and wet conditions"
+  },
+  {
+    "id": "G006",
+    "source_url": "https://sologk.com/products/lunar-2",
+    "source_title": "LUNAR 2",
+    "fact": "Lunar 2 is described as developed with professional keepers and elite coaches.",
+    "evidence_excerpt": "direct collaboration between professional keepers and elite coaches"
+  },
+  {
+    "id": "G007",
+    "source_url": "https://sologk.com/products/lunar-2",
+    "source_title": "LUNAR 2",
+    "fact": "Lunar 2 uses 4mm German Contact Latex and prioritizes grip and stopping power.",
+    "evidence_excerpt": "The Grip: 4mm German Contact Latex"
+  },
+  {
+    "id": "G008",
+    "source_url": "https://sologk.com/products/lunar-2",
+    "source_title": "LUNAR 2",
+    "fact": "SoloGK explicitly describes a performance-versus-durability tradeoff for Lunar 2.",
+    "evidence_excerpt": "You are choosing elite performance over long-term ruggedness"
+  },
+  {
+    "id": "G009",
+    "source_url": "https://sologk.com/",
+    "source_title": "SOLOGK.COM",
+    "fact": "SoloGK offers buying guidance to customers who are new to goalkeeper glove cuts, latex options, and styles.",
+    "evidence_excerpt": "NEW TO GOALKEEPING? CONFUSED BY THE DIFFERENT TYPES OF GLOVES?"
+  },
+  {
+    "id": "G010",
+    "source_url": "https://sologk.com/products.json?limit=50",
+    "source_title": "Public Shopify product catalog",
+    "fact": "The public storefront catalog lists about 20 product items, allowing product listings to be separated from collection/category links.",
+    "evidence_excerpt": "Public Shopify product catalog entries with product handles under /products/."
+  }
+]

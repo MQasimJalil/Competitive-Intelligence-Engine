@@ -1,0 +1,20 @@
+{
+  "required": [
+    {"fact": "SoloGK is a UK-based goalkeeper-glove brand focused on professional performance at accessible prices.", "evidence_ids": ["G001", "G002"]},
+    {"fact": "Its product architecture includes Eclipse, Lunar, Vortex, Cobra, and Viper collections.", "evidence_ids": ["G003"]},
+    {"fact": "The public shop lists about 20 actual product items and these must be separated from collection/category names.", "evidence_ids": ["G010"]},
+    {"fact": "Visible featured prices span GBP 25 to GBP 40.", "evidence_ids": ["G004"]},
+    {"fact": "Contact latex and wet/dry grip are central product differentiators.", "evidence_ids": ["G005", "G007"]},
+    {"fact": "Lunar 2 trades durability for elite performance.", "evidence_ids": ["G008"]}
+  ],
+  "important": [
+    {"fact": "The company addresses both experienced keepers and buyers who need glove-selection guidance.", "evidence_ids": ["G006", "G009"]}
+  ],
+  "must_not_claim": [
+    "SoloGK is a market leader.",
+    "SoloGK gloves outperform named competitors.",
+    "SoloGK has strong independent customer proof.",
+    "GBP 25 to GBP 40 represents every product price on the site.",
+    "Collection names such as Lunar, Vortex, Cobra, Eclipse, or Viper are individual products."
+  ]
+}

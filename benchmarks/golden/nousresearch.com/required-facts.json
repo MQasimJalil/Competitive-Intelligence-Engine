@@ -1,0 +1,19 @@
+{
+  "required": [
+    {"fact": "Nous Research is an open-source AI research organization focused on models and distributed training infrastructure.", "evidence_ids": ["G001"]},
+    {"fact": "Its mission emphasizes unrestricted open-source AI availability and human freedom.", "evidence_ids": ["G002"]},
+    {"fact": "Its portfolio spans models, agents, datasets, frameworks, infrastructure, papers, and simulators.", "evidence_ids": ["G004"]},
+    {"fact": "Hermes Agent is an open-source self-hosted autonomous agent with persistent memory and automation capabilities.", "evidence_ids": ["G005", "G006"]},
+    {"fact": "Nous actively publishes research and releases across several technical AI domains.", "evidence_ids": ["G008", "G009"]}
+  ],
+  "important": [
+    {"fact": "Psyche is positioned as open infrastructure for democratizing AI development.", "evidence_ids": ["G007"]},
+    {"fact": "The reviewed sources show an open artifact and ecosystem motion rather than standard SaaS pricing.", "evidence_ids": ["G010"]}
+  ],
+  "must_not_claim": [
+    "Nous Research has no commercial business model.",
+    "Nous Research is the leading open-source AI laboratory.",
+    "All Nous models outperform closed-source models.",
+    "Hermes Agent is free to operate because it is MIT licensed."
+  ]
+}

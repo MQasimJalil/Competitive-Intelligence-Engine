@@ -1,0 +1,68 @@
+services:
+  backend:
+    build:
+      context: .
+    container_name: competitor-brief-backend
+    restart: unless-stopped
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      APP_BASE_URL: http://127.0.0.1:8000
+      DATABASE_URL: postgresql://competitor:competitor_dev_password@postgres:5432/competitor_brief
+      JOB_REPOSITORY: postgres
+      USER_REPOSITORY: postgres
+      RENDERED_BROWSER_CHANNEL: ""
+    ports:
+      - "8000:8000"
+    volumes:
+      - competitor_brief_app_data:/app/var
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health')",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  postgres:
+    image: postgres:17-alpine
+    container_name: competitor-brief-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: competitor_brief
+      POSTGRES_USER: competitor
+      POSTGRES_PASSWORD: competitor_dev_password
+    ports:
+      - "54329:5432"
+    volumes:
+      - competitor_brief_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U competitor -d competitor_brief"]
+      interval: 3s
+      timeout: 3s
+      retries: 10
+
+  tests:
+    build:
+      context: .
+    profiles:
+      - test
+    environment:
+      AI_ANALYSIS_ENABLED: "false"
+      JOB_REPOSITORY: file
+      USER_REPOSITORY: file
+      RENDERED_BROWSER_ENABLED: "false"
+    command: python -m pytest -q
+
+volumes:
+  competitor_brief_app_data:
+  competitor_brief_postgres_data:

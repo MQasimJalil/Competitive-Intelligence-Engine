@@ -1,0 +1,47 @@
+{
+  "domain": "linear.app",
+  "required_fact_recall": 1.0,
+  "important_fact_recall": 0.5,
+  "forbidden_claim_avoidance": 1.0,
+  "citation_reference_validity": 1.0,
+  "required_facts": [
+    {
+      "fact": "Linear is a product-development system for human teams and AI agents.",
+      "coverage": 0.5714,
+      "matched": true
+    },
+    {
+      "fact": "Its workflow spans intake, planning, building, code review, and monitoring.",
+      "coverage": 0.75,
+      "matched": true
+    },
+    {
+      "fact": "Pricing runs from Free through Basic at USD 10, Business at USD 16, and custom Enterprise.",
+      "coverage": 0.75,
+      "matched": true
+    },
+    {
+      "fact": "AI and agent capabilities are central to both positioning and higher-tier packaging.",
+      "coverage": 0.75,
+      "matched": true
+    },
+    {
+      "fact": "Linear claims more than 33,000 organizations and publishes customer outcome metrics.",
+      "coverage": 0.6,
+      "matched": true
+    }
+  ],
+  "important_facts": [
+    {
+      "fact": "The product serves startups through enterprises across multiple industries.",
+      "coverage": 0.7143,
+      "matched": true
+    },
+    {
+      "fact": "Recent releases indicate rapid expansion into code review, context, and agent workflows.",
+      "coverage": 0.3636,
+      "matched": false
+    }
+  ],
+  "forbidden_claims_found": []
+}

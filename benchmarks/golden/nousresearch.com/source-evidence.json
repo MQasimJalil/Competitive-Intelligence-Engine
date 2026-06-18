@@ -1,0 +1,72 @@
+[
+  {
+    "id": "G001",
+    "source_url": "https://nousresearch.com/",
+    "source_title": "Nous Research",
+    "fact": "Nous Research positions itself as an American open-source AI organization training language models and distributed training infrastructure.",
+    "evidence_excerpt": "train world-class open source language models and build infrastructure"
+  },
+  {
+    "id": "G002",
+    "source_url": "https://nousresearch.com/",
+    "source_title": "Nous Research",
+    "fact": "Its stated mission connects open-source language models with human rights, freedoms, unrestricted availability, and understanding.",
+    "evidence_excerpt": "advance human rights and freedoms by creating and proliferating open source language models"
+  },
+  {
+    "id": "G003",
+    "source_url": "https://nousresearch.com/",
+    "source_title": "Nous Research",
+    "fact": "Research focus areas include model architecture, data synthesis, fine-tuning, and reasoning.",
+    "evidence_excerpt": "model architecture, data synthesis, fine-tuning, and reasoning"
+  },
+  {
+    "id": "G004",
+    "source_url": "https://nousresearch.com/releases",
+    "source_title": "Nous Releases",
+    "fact": "The release portfolio spans agents, models, datasets, frameworks, training infrastructure, papers, and simulators.",
+    "evidence_excerpt": "AGENT ... MODEL ... DATASET ... FRAMEWORK ... TRAINING ... PAPER ... SIMULATOR"
+  },
+  {
+    "id": "G005",
+    "source_url": "https://hermes-agent.nousresearch.com/",
+    "source_title": "Hermes Agent",
+    "fact": "Hermes Agent is an MIT-licensed autonomous agent that runs on the user's server with persistent memory.",
+    "evidence_excerpt": "Open Source ... MIT License ... autonomous agent that lives on your server"
+  },
+  {
+    "id": "G006",
+    "source_url": "https://hermes-agent.nousresearch.com/",
+    "source_title": "Hermes Agent",
+    "fact": "Hermes Agent supports multiple communication platforms, scheduled automations, subagents, sandboxing, and browser control.",
+    "evidence_excerpt": "Persistent memory ... Scheduled Automations ... Delegates & Parallelizes ... Real Sandboxing"
+  },
+  {
+    "id": "G007",
+    "source_url": "https://nousresearch.com/releases",
+    "source_title": "Nous Releases",
+    "fact": "Psyche is described as open infrastructure democratizing AI development.",
+    "evidence_excerpt": "Open infrastructure democratizing AI development"
+  },
+  {
+    "id": "G008",
+    "source_url": "https://nousresearch.com/releases",
+    "source_title": "Nous Releases",
+    "fact": "Recent releases include Hermes Agent, NousCoder-14B, Nomos 1, and Hermes 4.3 Seed.",
+    "evidence_excerpt": "Hermes Agent ... NousCoder-14B ... Nomos 1 ... Hermes-4.3-Seed-36B"
+  },
+  {
+    "id": "G009",
+    "source_url": "https://nousresearch.com/blog",
+    "source_title": "Nous Blog",
+    "fact": "Current research publishing covers neuron attribution, efficient attention and pretraining, programming models, RL frameworks, and decentralized training.",
+    "evidence_excerpt": "Model Neuroscience ... Lighthouse Attention ... Efficient pretraining ... NousCoder-14B"
+  },
+  {
+    "id": "G010",
+    "source_url": "https://nousresearch.com/releases",
+    "source_title": "Nous Releases",
+    "fact": "Many Nous outputs link to public Hugging Face, GitHub, and paper artifacts rather than conventional paid-plan pricing.",
+    "evidence_excerpt": "HuggingFace ... GitHub ... Technical Report"
+  }
+]

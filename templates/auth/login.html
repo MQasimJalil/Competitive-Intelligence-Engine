@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="auth-shell">
+  <div>
+    <p class="dossier-kicker">Private beta</p>
+    <h1>Sign in</h1>
+    <p class="hero-copy">
+      Access is limited to invited internal testers. Reports stay tied to your account.
+    </p>
+  </div>
+
+  <form method="post" class="card auth-card">
+    {% if error %}
+      <div class="notice error">{{ error }}</div>
+    {% endif %}
+    <input type="hidden" name="next" value="{{ next }}">
+    <label for="email">Email</label>
+    <input id="email" name="email" type="email" autocomplete="email" value="{{ email }}" required>
+
+    <label for="password">Password</label>
+    <input
+      id="password"
+      name="password"
+      type="password"
+      autocomplete="current-password"
+      required
+    >
+
+    <button type="submit">Sign in</button>
+  </form>
+</section>
+{% endblock %}
