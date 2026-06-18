@@ -1,10 +1,6 @@
-# Competitor Brief
+# Competitive Intelligence Engine
 
-Python-first MVP for a source-cited competitor research snapshot tool.
-
-The first tool lives at `/tools/competitor-brief`. It accepts a competitor domain,
-collects safe public signals, and renders a structured preview with a downloadable
-full dossier.
+An AI-assisted competitive intelligence platform that transforms public web data into source-cited business insights, competitor snapshots, and executive reports.
 
 ## Principles
 
