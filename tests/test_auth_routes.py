@@ -79,6 +79,27 @@ def test_logged_in_user_sees_only_their_own_library(tmp_path, monkeypatch):
     assert hidden.job_id not in response.text
 
 
+def test_logged_in_header_includes_accessible_mobile_menu(tmp_path, monkeypatch):
+    user_store, _job_store = _configure_auth(monkeypatch, tmp_path)
+    user_store.create_user(
+        name="Tester One",
+        email="tester@example.com",
+        password="tester-password",
+    )
+    client = TestClient(app)
+    _login(client, "tester@example.com", "tester-password")
+
+    response = client.get("/tools/competitor-brief")
+
+    assert response.status_code == 200
+    assert 'class="menu-toggle"' in response.text
+    assert 'aria-controls="primary-navigation"' in response.text
+    assert 'aria-expanded="false"' in response.text
+    assert 'id="primary-navigation"' in response.text
+    assert "nav-open" in response.text
+    assert "Menu" in response.text
+
+
 def test_non_admin_cannot_open_admin_dashboard(tmp_path, monkeypatch):
     user_store, _job_store = _configure_auth(monkeypatch, tmp_path)
     user_store.create_user(

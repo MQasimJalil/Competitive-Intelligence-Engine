@@ -15,7 +15,16 @@
         <small>Public-source briefs</small>
       </span>
     </a>
-    <nav class="top-nav" aria-label="Primary">
+    <button
+      class="menu-toggle"
+      type="button"
+      aria-controls="primary-navigation"
+      aria-expanded="false"
+    >
+      <span>Menu</span>
+      <i aria-hidden="true"></i>
+    </button>
+    <nav class="top-nav" id="primary-navigation" aria-label="Primary">
       <div class="nav-links">
         <a
           class="{{ 'active' if request.url.path == '/tools/competitor-brief' else '' }}"
@@ -44,5 +53,40 @@
     {% if content %}<p>{{ content }}</p>{% endif %}
     {% block content %}{% endblock %}
   </main>
+  <script>
+    const appHeader = document.querySelector(".app-header");
+    const menuToggle = document.querySelector(".menu-toggle");
+    const primaryNavigation = document.querySelector("#primary-navigation");
+
+    if (appHeader && menuToggle && primaryNavigation) {
+      const closeMenu = () => {
+        appHeader.classList.remove("nav-open");
+        menuToggle.setAttribute("aria-expanded", "false");
+      };
+
+      menuToggle.addEventListener("click", () => {
+        const isOpen = appHeader.classList.toggle("nav-open");
+        menuToggle.setAttribute("aria-expanded", String(isOpen));
+      });
+
+      primaryNavigation.addEventListener("click", (event) => {
+        if (event.target.closest("a")) {
+          closeMenu();
+        }
+      });
+
+      document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape") {
+          closeMenu();
+        }
+      });
+
+      document.addEventListener("click", (event) => {
+        if (!appHeader.contains(event.target)) {
+          closeMenu();
+        }
+      });
+    }
+  </script>
 </body>
 </html>
