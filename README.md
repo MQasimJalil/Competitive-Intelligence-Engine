@@ -26,7 +26,7 @@ Open `http://127.0.0.1:8000/tools/competitor-brief`.
 
 The Compose file binds the backend to `127.0.0.1:8000` so nginx/Caddy can be the
 only public HTTPS entrypoint. For a public VPS behind HTTPS, set these in your
-ignored `.env` file:
+ `.env` file:
 
 ```dotenv
 APP_ENV="production"
