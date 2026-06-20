@@ -10,12 +10,15 @@ class AdminSummary:
     total_users: int
     total_reports: int
     complete_reports: int
+    partial_reports: int
     failed_reports: int
     ai_requested: int
     ai_successes: int
     total_ai_cost_usd: float
     total_apify_cost_usd: float
     total_estimated_cost_usd: float
+    max_user_reports: int
+    max_user_cost_usd: float
 
 
 @dataclass(frozen=True)
@@ -64,12 +67,15 @@ def build_admin_view(job_store, user_store=None) -> tuple[AdminSummary, list[Adm
             total_users=len(users),
             total_reports=len(jobs),
             complete_reports=sum(user.complete_reports for user in users),
+            partial_reports=sum(user.partial_reports for user in users),
             failed_reports=sum(user.failed_reports for user in users),
             ai_requested=sum(user.ai_requested for user in users),
             ai_successes=sum(user.ai_successes for user in users),
             total_ai_cost_usd=sum(user.total_ai_cost_usd for user in users),
             total_apify_cost_usd=sum(user.total_apify_cost_usd for user in users),
             total_estimated_cost_usd=sum(user.total_estimated_cost_usd for user in users),
+            max_user_reports=max((user.total_reports for user in users), default=0),
+            max_user_cost_usd=max((user.total_estimated_cost_usd for user in users), default=0.0),
         ),
         users,
     )

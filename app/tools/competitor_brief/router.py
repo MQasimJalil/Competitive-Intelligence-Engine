@@ -3,10 +3,11 @@ from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
 
 from app.auth import user_store
-from app.jobs import job_store
+from app.config import settings
+from app.jobs import JobStartLimiter, job_store
 from app.reporting.dossier_pdf import render_full_dossier_bytes
 from app.reporting.evidence_pdf import render_evidence_appendix_bytes
-from app.schemas import NormalizedBusinessProfile, ReportFeedback, WorkflowState
+from app.schemas import JobStatus, NormalizedBusinessProfile, ReportFeedback, WorkflowState
 from app.schemas.auth import UserRole
 from app.scrapers.domain import normalize_domain
 from app.tools.competitor_brief.admin_view import build_admin_view
@@ -17,6 +18,11 @@ from app.web import auth as web_auth
 router = APIRouter(prefix="/tools/competitor-brief", tags=["competitor-brief"])
 templates = Jinja2Templates(directory="templates")
 ROLE_FORM = Form("tester")
+ACTIVE_JOB_STATUSES = {JobStatus.PENDING, JobStatus.RUNNING}
+job_start_limiter = JobStartLimiter(
+    window_seconds=settings.job_rate_limit_window_seconds,
+    max_per_window=settings.job_rate_limit_max_per_window,
+)
 
 
 @router.get("")
@@ -45,13 +51,20 @@ def competitor_brief_history(request: Request):
 
 
 @router.get("/admin")
-def competitor_brief_admin(request: Request):
+def competitor_brief_admin(request: Request, tab: str = "dashboard"):
     web_auth.require_admin(request)
+    active_tab = tab if tab in {"dashboard", "users", "usage"} else "dashboard"
     summary, users = build_admin_view(job_store, user_store)
     return templates.TemplateResponse(
         request,
         "tools/competitor_brief_admin.html",
-        _template_context(request, summary=summary, users=users, user_error=""),
+        _template_context(
+            request,
+            summary=summary,
+            users=users,
+            user_error="",
+            active_tab=active_tab,
+        ),
     )
 
 
@@ -76,10 +89,11 @@ def create_admin_user(
                 summary=summary,
                 users=users,
                 user_error=str(exc),
+                active_tab="users",
             ),
             status_code=400,
         )
-    return RedirectResponse(url="/tools/competitor-brief/admin", status_code=303)
+    return RedirectResponse(url="/tools/competitor-brief/admin?tab=users", status_code=303)
 
 
 @router.post("/pdf")
@@ -89,29 +103,21 @@ async def competitor_brief_pdf(
     job_id: str = Form(""),
 ) -> Response:
     user = web_auth.require_user(request)
-    if job_id:
-        _owned_job(job_id, user.user_id)
-        snapshot = _saved_snapshot(job_id)
-        return _pdf_response(
-            render_full_dossier_bytes(_report_from_snapshot(snapshot, job_id=job_id)),
-            snapshot.domain,
-            "competitor-dossier",
+    if not job_id:
+        raise HTTPException(
+            status_code=400,
+            detail="Open a completed brief before downloading the PDF.",
         )
-    snapshot = await build_preview_snapshot(domain)
-    report = build_report_view(
+    job = _owned_job(job_id, user.user_id)
+    saved = job_store.read_pdf(job_id)
+    if saved is not None:
+        return _pdf_response(saved, job.domain, "competitor-dossier")
+    snapshot = _saved_snapshot(job_id)
+    return _pdf_response(
+        render_full_dossier_bytes(_report_from_snapshot(snapshot, job_id=job_id)),
         snapshot.domain,
-        snapshot.results,
-        snapshot.profile,
-        snapshot.business_profile,
-        snapshot.ai_analysis,
-        snapshot.ai_analysis_status,
-        snapshot.ai_run,
-        snapshot.workflow,
-        snapshot.validation,
-        snapshot.intelligence,
+        "competitor-dossier",
     )
-    pdf = render_full_dossier_bytes(report)
-    return _pdf_response(pdf, snapshot.domain, "competitor-dossier")
 
 
 @router.post("/evidence")
@@ -121,12 +127,16 @@ async def competitor_brief_evidence(
     job_id: str = Form(""),
 ) -> Response:
     user = web_auth.require_user(request)
-    if job_id:
-        _owned_job(job_id, user.user_id)
-        saved = job_store.read_evidence_pdf(job_id)
-        if saved is not None:
-            return _pdf_response(saved, domain, "evidence-appendix")
-    snapshot = await build_preview_snapshot(domain)
+    if not job_id:
+        raise HTTPException(
+            status_code=400,
+            detail="Open a completed brief before downloading the evidence appendix.",
+        )
+    job = _owned_job(job_id, user.user_id)
+    saved = job_store.read_evidence_pdf(job_id)
+    if saved is not None:
+        return _pdf_response(saved, job.domain, "evidence-appendix")
+    snapshot = _saved_snapshot(job_id)
     pdf = render_evidence_appendix_bytes(
         snapshot.business_profile or NormalizedBusinessProfile(domain=snapshot.domain)
     )
@@ -240,7 +250,11 @@ async def create_competitor_job(
     try:
         normalized = normalize_domain(domain)
     except ValueError as exc:
-        raise HTTPException(status_code=400, detail="Enter a valid public domain or URL") from exc
+        raise HTTPException(
+            status_code=400,
+            detail="Enter a public website, such as example.com or https://example.com.",
+        ) from exc
+    _enforce_job_start_limits(user.user_id)
     job = job_store.create(
         normalized,
         owner_id=user.user_id,
@@ -313,6 +327,28 @@ def _owned_job(job_id: str, owner_id: str):
     if job is None or job.owner_id != owner_id:
         raise HTTPException(status_code=404, detail="Job not found")
     return job
+
+
+def _enforce_job_start_limits(owner_id: str) -> None:
+    if _active_job_count(job_store.list_for_owner(owner_id)) >= settings.job_user_concurrency_limit:
+        raise HTTPException(
+            status_code=429,
+            detail="This user already has a report running. Wait for it to finish first.",
+        )
+    if _active_job_count(job_store.list_all()) >= settings.job_global_concurrency_limit:
+        raise HTTPException(
+            status_code=429,
+            detail="The research queue is full. Wait for an active report to finish first.",
+        )
+    if not job_start_limiter.allow(owner_id):
+        raise HTTPException(
+            status_code=429,
+            detail="Too many reports started recently. Wait a minute and try again.",
+        )
+
+
+def _active_job_count(jobs) -> int:
+    return sum(1 for job in jobs if job.status in ACTIVE_JOB_STATUSES)
 
 
 def _saved_snapshot(job_id: str):

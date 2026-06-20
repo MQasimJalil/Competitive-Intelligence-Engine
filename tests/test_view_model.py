@@ -5,7 +5,9 @@ from app.schemas import (
     ExtractionStatus,
     ProfileClaim,
     ProfileSection,
+    ValidationIssue,
     ValidationReport,
+    ValidationSeverity,
     WorkflowRun,
     WorkflowState,
 )
@@ -75,3 +77,40 @@ def test_report_view_exposes_workflow_and_validation_diagnostics():
     assert report.workflow_state == "failed"
     assert report.workflow_stages[0].label == "Scraping"
     assert not report.validation_ready
+
+
+def test_report_view_explains_partial_state_from_validation_issue():
+    workflow = WorkflowRun(domain="example.com")
+    workflow.advance(WorkflowState.SCRAPING, "Collecting")
+    workflow.advance(WorkflowState.CLASSIFYING, "Classifying")
+    workflow.advance(WorkflowState.EXTRACTING, "Extracting")
+    workflow.advance(WorkflowState.VALIDATING, "Validating")
+    workflow.advance(WorkflowState.PARTIAL, "Finished with partial evidence.")
+    validation = ValidationReport(
+        ready_for_report=True,
+        checked_fact_count=12,
+        issues=[
+            ValidationIssue(
+                code="partial_collection",
+                severity=ValidationSeverity.WARNING,
+                message="2 collection step(s) were blocked or failed.",
+                source_urls=[
+                    "https://example.com/careers",
+                    "https://example.com/pricing",
+                ],
+            )
+        ],
+    )
+
+    report = build_report_view(
+        "example.com",
+        [],
+        workflow=workflow,
+        validation=validation,
+    )
+
+    assert report.workflow_state_label == "Partial evidence"
+    assert report.workflow_state_reason == (
+        "Partial because collection failed or was blocked for "
+        "example.com/careers and example.com/pricing."
+    )

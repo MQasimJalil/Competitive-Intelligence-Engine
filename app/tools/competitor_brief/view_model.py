@@ -111,6 +111,8 @@ class ReportView:
     ai_analysis_status: str
     ai_run: AIAnalysisRun | None
     workflow_state: str
+    workflow_state_label: str
+    workflow_state_reason: str
     workflow_stages: list[WorkflowStageView]
     node_runs: list[NodeRunView]
     validation_ready: bool
@@ -189,6 +191,8 @@ def build_report_view(
         ai_analysis_status=ai_analysis_status,
         ai_run=ai_run,
         workflow_state=workflow.state.value if workflow else "unknown",
+        workflow_state_label=_workflow_state_label(workflow),
+        workflow_state_reason=_workflow_state_reason(workflow, validation),
         workflow_stages=_workflow_stage_views(workflow),
         node_runs=[_node_run_view(node) for node in (workflow.node_runs if workflow else [])],
         validation_ready=validation.ready_for_report if validation else False,
@@ -229,6 +233,74 @@ def _source_label(source_url: str) -> str:
     parsed = urlparse(source_url)
     path = parsed.path.rstrip("/") or "/"
     return f"{parsed.netloc}{path}"
+
+
+def _workflow_state_label(workflow: WorkflowRun | None) -> str:
+    if workflow is None:
+        return "Status unknown"
+    return {
+        "complete": "Complete",
+        "partial": "Partial evidence",
+        "failed": "Failed",
+        "pending": "Pending",
+        "scraping": "Collecting evidence",
+        "classifying": "Classifying pages",
+        "extracting": "Extracting facts",
+        "validating": "Validating evidence",
+    }.get(workflow.state.value, workflow.state.value.replace("_", " ").title())
+
+
+def _workflow_state_reason(
+    workflow: WorkflowRun | None,
+    validation: ValidationReport | None,
+) -> str:
+    if workflow is None:
+        return "Status is unavailable for this report."
+    if workflow.state.value == "complete":
+        return "Enough validated public evidence was collected for this brief."
+    if workflow.state.value == "failed":
+        detail = _last_workflow_detail(workflow)
+        return detail or "Research failed before a usable brief could be assembled."
+    if workflow.state.value != "partial":
+        return _last_workflow_detail(workflow) or "Research is still in progress."
+
+    if validation:
+        errors = [issue for issue in validation.issues if issue.severity.value == "error"]
+        if errors:
+            return f"Partial because validation found: {errors[0].message}"
+        collection_issue = next(
+            (issue for issue in validation.issues if issue.code == "partial_collection"),
+            None,
+        )
+        if collection_issue:
+            labels = [_source_label(url) for url in collection_issue.source_urls[:3]]
+            if labels:
+                return (
+                    "Partial because collection failed or was blocked for "
+                    f"{_join_human(labels)}."
+                )
+            return f"Partial because {collection_issue.message}"
+        warnings = [issue for issue in validation.issues if issue.severity.value == "warning"]
+        if warnings:
+            return f"Partial because {warnings[0].message}"
+    return "Partial because the scan finished with incomplete validated evidence."
+
+
+def _last_workflow_detail(workflow: WorkflowRun) -> str:
+    for transition in reversed(workflow.transitions):
+        if transition.detail:
+            return transition.detail
+    return ""
+
+
+def _join_human(items: list[str]) -> str:
+    if not items:
+        return ""
+    if len(items) == 1:
+        return items[0]
+    if len(items) == 2:
+        return f"{items[0]} and {items[1]}"
+    return f"{', '.join(items[:-1])}, and {items[-1]}"
 
 
 def _workflow_stage_views(workflow: WorkflowRun | None) -> list[WorkflowStageView]:

@@ -28,7 +28,7 @@ from app.tools.competitor_brief.service import describe_collection_failure
             ExtractionStatus.NETWORK_FAILED,
             None,
             "Domain could not be resolved",
-            "The domain could not be resolved. Check that it exists and is spelled correctly.",
+            "We couldn't find that domain. Check the spelling or try the company's main website.",
         ),
         (
             ExtractionStatus.NETWORK_FAILED,

@@ -1,4 +1,5 @@
 import asyncio
+from dataclasses import replace
 
 from app.auth.store import FileUserStore
 from app.jobs.store import FileJobStore
@@ -6,6 +7,7 @@ from app.main import app
 from app.schemas import (
     ExtractionResult,
     ExtractionStatus,
+    JobStatus,
     NormalizedBusinessProfile,
     WorkflowRun,
     WorkflowState,
@@ -47,7 +49,7 @@ def test_tool_page_offers_free_and_ai_report_choices(tmp_path, monkeypatch):
     response = client.get("/tools/competitor-brief")
 
     assert response.status_code == 200
-    assert "Free report" in response.text
+    assert "Free brief" in response.text
     assert "AI analysis" in response.text
     assert "1 credit" in response.text
     assert "scanProgress.hidden = true" in response.text
@@ -115,7 +117,78 @@ def test_create_job_returns_clear_error_for_invalid_domain(tmp_path, monkeypatch
     response = client.post("/tools/competitor-brief/jobs", data={"domain": "not a domain"})
 
     assert response.status_code == 400
-    assert response.json()["detail"] == "Enter a valid public domain or URL"
+    assert (
+        response.json()["detail"]
+        == "Enter a public website, such as example.com or https://example.com."
+    )
+
+
+def test_create_job_enforces_user_concurrency_limit(tmp_path, monkeypatch):
+    store = FileJobStore(tmp_path)
+    monkeypatch.setattr(router_module, "job_store", store)
+    monkeypatch.setattr(router_module.job_start_limiter, "allow", lambda user_id: True)
+    monkeypatch.setattr(
+        router_module,
+        "settings",
+        replace(
+            router_module.settings,
+            job_user_concurrency_limit=1,
+            job_global_concurrency_limit=10,
+        ),
+    )
+    client, user = _create_logged_in_client(monkeypatch, tmp_path)
+    existing = store.create("already-running.example", owner_id=user.user_id)
+    existing.status = JobStatus.RUNNING
+    store.save(existing)
+
+    response = client.post("/tools/competitor-brief/jobs", data={"domain": "example.com"})
+
+    assert response.status_code == 429
+    assert "already has a report running" in response.json()["detail"]
+
+
+def test_create_job_enforces_rate_limit(tmp_path, monkeypatch):
+    store = FileJobStore(tmp_path)
+    monkeypatch.setattr(router_module, "job_store", store)
+    monkeypatch.setattr(router_module.job_start_limiter, "allow", lambda user_id: False)
+    client, _user = _create_logged_in_client(monkeypatch, tmp_path)
+
+    response = client.post("/tools/competitor-brief/jobs", data={"domain": "example.com"})
+
+    assert response.status_code == 429
+    assert "Too many reports started" in response.json()["detail"]
+
+
+def test_pdf_download_requires_completed_job_id_without_recrawling(tmp_path, monkeypatch):
+    store = FileJobStore(tmp_path)
+    monkeypatch.setattr(router_module, "job_store", store)
+
+    async def fail_if_called(*args, **kwargs):
+        raise AssertionError("download endpoint must not rebuild crawl snapshots")
+
+    monkeypatch.setattr(router_module, "build_preview_snapshot", fail_if_called)
+    client, _user = _create_logged_in_client(monkeypatch, tmp_path)
+
+    response = client.post("/tools/competitor-brief/pdf", data={"domain": "example.com"})
+
+    assert response.status_code == 400
+    assert "completed brief" in response.json()["detail"]
+
+
+def test_evidence_download_requires_completed_job_id_without_recrawling(tmp_path, monkeypatch):
+    store = FileJobStore(tmp_path)
+    monkeypatch.setattr(router_module, "job_store", store)
+
+    async def fail_if_called(*args, **kwargs):
+        raise AssertionError("download endpoint must not rebuild crawl snapshots")
+
+    monkeypatch.setattr(router_module, "build_preview_snapshot", fail_if_called)
+    client, _user = _create_logged_in_client(monkeypatch, tmp_path)
+
+    response = client.post("/tools/competitor-brief/evidence", data={"domain": "example.com"})
+
+    assert response.status_code == 400
+    assert "completed brief" in response.json()["detail"]
 
 
 def test_failed_research_job_persists_user_facing_reason(tmp_path, monkeypatch):
@@ -138,7 +211,7 @@ def test_failed_research_job_persists_user_facing_reason(tmp_path, monkeypatch):
         validation=validate_business_profile([result], profile),
         workflow=workflow,
         failure_reason=(
-            "The domain could not be resolved. Check that it exists and is spelled correctly."
+            "We couldn't find that domain. Check the spelling or try the company's main website."
         ),
     )
 

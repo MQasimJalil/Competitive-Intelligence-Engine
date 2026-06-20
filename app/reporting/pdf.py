@@ -75,6 +75,8 @@ def render_competitor_pdf_bytes(report: ReportView) -> bytes:
             border="#E6D39D",
         ),
         Spacer(1, 4 * mm),
+        *(_ai_analysis_cards(report, styles) if report.ai_analysis else []),
+        Spacer(1, 4 * mm) if report.ai_analysis else Spacer(1, 0),
         Paragraph("Evidence Coverage", styles["h2"]),
         *_bullet(_evidence_coverage(report), styles),
         Spacer(1, 4 * mm),
@@ -112,7 +114,6 @@ def render_competitor_pdf_bytes(report: ReportView) -> bytes:
         Paragraph("Competitive Battlecard", styles["h2"]),
         _battlecard_table(report, styles),
         Spacer(1, 4 * mm),
-        *(_ai_analysis_cards(report, styles) if report.ai_analysis else []),
         Paragraph("Evidence Ledger", styles["h2"]),
         Paragraph(
             "Customer-facing citations are compact. Download evidence for the full ledger.",

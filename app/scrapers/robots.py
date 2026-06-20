@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from time import monotonic
 from urllib.parse import urljoin, urlparse
 from urllib.robotparser import RobotFileParser
 
@@ -23,6 +24,14 @@ class RobotsDecision:
     reason: str = ""
 
 
+_RobotsCacheValue = tuple[float, RobotsDecision, RobotFileParser | None]
+_ROBOTS_CACHE: dict[tuple[str, str, str], _RobotsCacheValue] = {}
+
+
+def clear_robots_cache() -> None:
+    _ROBOTS_CACHE.clear()
+
+
 async def can_fetch_url(url: str, user_agent: str | None = None) -> RobotsDecision:
     try:
         safe_url = validate_public_url(url)
@@ -33,6 +42,11 @@ async def can_fetch_url(url: str, user_agent: str | None = None) -> RobotsDecisi
     parsed = urlparse(safe_url)
     robots_url = f"{parsed.scheme}://{parsed.netloc}/robots.txt"
     agent = user_agent or settings.crawler_user_agent
+    cache_key = (parsed.scheme, parsed.netloc, agent)
+    cached = _ROBOTS_CACHE.get(cache_key)
+    if cached and monotonic() - cached[0] <= settings.robots_cache_ttl_seconds:
+        return _decision_from_cached_parser(safe_url, agent, cached[1], cached[2])
+
     parser = RobotFileParser()
     parser.set_url(robots_url)
 
@@ -99,26 +113,48 @@ async def can_fetch_url(url: str, user_agent: str | None = None) -> RobotsDecisi
 
     status = status_for_http_response(response_status)
     if 400 <= response_status < 500 and response_status != 429:
-        return RobotsDecision(
+        decision = RobotsDecision(
             True,
             ExtractionStatus.NO_DATA,
             robots_url,
             f"robots.txt unavailable (HTTP {response_status}); no crawl rules were declared",
         )
+        _ROBOTS_CACHE[cache_key] = (monotonic(), decision, None)
+        return decision
     if status != ExtractionStatus.OK:
-        return RobotsDecision(
+        decision = RobotsDecision(
             False,
             status,
             robots_url,
             f"robots.txt returned HTTP {response_status}",
         )
+        _ROBOTS_CACHE[cache_key] = (monotonic(), decision, None)
+        return decision
 
     text = bytes(content).decode(response_encoding or "utf-8", errors="replace")
     parser.parse(text.splitlines())
+    base_decision = RobotsDecision(
+        True,
+        ExtractionStatus.OK,
+        robots_url,
+        "robots.txt rules cached",
+    )
+    _ROBOTS_CACHE[cache_key] = (monotonic(), base_decision, parser)
+    return _decision_from_cached_parser(safe_url, agent, base_decision, parser)
+
+
+def _decision_from_cached_parser(
+    safe_url: str,
+    agent: str,
+    base_decision: RobotsDecision,
+    parser: RobotFileParser | None,
+) -> RobotsDecision:
+    if parser is None:
+        return base_decision
     allowed = parser.can_fetch(agent, safe_url)
     return RobotsDecision(
         allowed,
         ExtractionStatus.OK if allowed else ExtractionStatus.ROBOTS_DISALLOWED,
-        robots_url,
+        base_decision.robots_url,
         "allowed" if allowed else "disallowed by robots.txt",
     )

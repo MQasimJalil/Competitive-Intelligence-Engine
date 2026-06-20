@@ -219,12 +219,27 @@ class PostgresJobStore:
             raise ValueError("DATABASE_URL is required for the Postgres job repository")
         self.database_url = database_url
         self.retention_days = retention_days
+        self._pool = self._build_pool()
         self.initialize()
 
     def _connect(self):
+        if self._pool is not None:
+            return self._pool.connection()
         import psycopg
 
         return psycopg.connect(self.database_url)
+
+    def _build_pool(self):
+        try:
+            from psycopg_pool import ConnectionPool
+        except ImportError:
+            return None
+        return ConnectionPool(
+            self.database_url,
+            min_size=1,
+            max_size=settings.postgres_pool_max_size,
+            open=True,
+        )
 
     def initialize(self) -> None:
         with self._connect() as connection, connection.cursor() as cursor:

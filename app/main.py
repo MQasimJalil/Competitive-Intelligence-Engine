@@ -2,17 +2,27 @@ from fastapi import FastAPI, Request
 from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from starlette.middleware.gzip import GZipMiddleware
 
 from app.config import settings
 from app.tools.competitor_brief.router import router as competitor_brief_router
 from app.web.auth import router as auth_router
 
 app = FastAPI(title=settings.app_name)
+app.add_middleware(GZipMiddleware, minimum_size=1000)
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
 
 app.include_router(auth_router)
 app.include_router(competitor_brief_router)
+
+
+@app.middleware("http")
+async def add_static_cache_headers(request: Request, call_next):
+    response = await call_next(request)
+    if request.url.path.startswith("/static/"):
+        response.headers.setdefault("Cache-Control", "public, max-age=86400")
+    return response
 
 
 @app.get("/", include_in_schema=False)

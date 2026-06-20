@@ -69,6 +69,13 @@ def _apify_max_cost_usd() -> float:
     return _float_env("APIFY_MAX_COST_USD", _report_max_cost_usd() / 2, minimum=0.0)
 
 
+def _session_cookie_secure() -> bool:
+    return _bool_env(
+        "SESSION_COOKIE_SECURE",
+        os.getenv("APP_ENV", "development").casefold() == "production",
+    )
+
+
 @dataclass(frozen=True)
 class Settings:
     app_name: str = os.getenv("APP_NAME", "Competitor Brief")
@@ -88,6 +95,11 @@ class Settings:
     crawl_selection_limit: int = _int_env("CRAWL_SELECTION_LIMIT", 5, maximum=10)
     crawl_concurrency: int = _int_env("CRAWL_CONCURRENCY", 3, maximum=5)
     robots_max_response_bytes: int = _int_env("ROBOTS_MAX_RESPONSE_BYTES", 250_000)
+    robots_cache_ttl_seconds: int = _int_env(
+        "ROBOTS_CACHE_TTL_SECONDS",
+        300,
+        maximum=60 * 60,
+    )
     rendered_browser_enabled: bool = _bool_env("RENDERED_BROWSER_ENABLED", True)
     rendered_browser_channel: str = os.getenv("RENDERED_BROWSER_CHANNEL", "chrome")
     rendered_browser_timeout_seconds: float = _float_env("RENDERED_BROWSER_TIMEOUT_SECONDS", 20.0)
@@ -112,15 +124,37 @@ class Settings:
     job_store_dir: str = os.getenv("JOB_STORE_DIR", "var/jobs")
     job_repository: str = os.getenv("JOB_REPOSITORY", "file")
     database_url: str = os.getenv("DATABASE_URL", "")
+    postgres_pool_max_size: int = _int_env("POSTGRES_POOL_MAX_SIZE", 8, maximum=50)
     local_owner_id: str = os.getenv("LOCAL_OWNER_ID", "local-development-user")
     user_store_dir: str = os.getenv("USER_STORE_DIR", "var/users")
     user_repository: str = os.getenv("USER_REPOSITORY", os.getenv("JOB_REPOSITORY", "file"))
     auth_secret: str = os.getenv("AUTH_SECRET", "dev-insecure-change-me")
     session_cookie_name: str = os.getenv("SESSION_COOKIE_NAME", "competitor_brief_session")
+    session_cookie_secure: bool = field(default_factory=_session_cookie_secure)
     session_max_age_seconds: int = _int_env(
         "SESSION_MAX_AGE_SECONDS",
         60 * 60 * 24 * 14,
         maximum=60 * 60 * 24 * 90,
+    )
+    job_rate_limit_window_seconds: int = _int_env(
+        "JOB_RATE_LIMIT_WINDOW_SECONDS",
+        60,
+        maximum=60 * 60,
+    )
+    job_rate_limit_max_per_window: int = _int_env(
+        "JOB_RATE_LIMIT_MAX_PER_WINDOW",
+        6,
+        maximum=100,
+    )
+    job_user_concurrency_limit: int = _int_env(
+        "JOB_USER_CONCURRENCY_LIMIT",
+        1,
+        maximum=10,
+    )
+    job_global_concurrency_limit: int = _int_env(
+        "JOB_GLOBAL_CONCURRENCY_LIMIT",
+        3,
+        maximum=50,
     )
     admin_name: str = os.getenv("ADMIN_NAME", "Admin")
     admin_email: str = os.getenv("ADMIN_EMAIL", "")

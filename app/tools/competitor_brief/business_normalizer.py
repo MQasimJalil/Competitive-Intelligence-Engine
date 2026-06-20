@@ -87,7 +87,7 @@ def _fact_kind(claim: ObservedClaim) -> BusinessFactKind | None:
         return BusinessFactKind.COMPANY_DETAIL
     if "best known for" in value or "we are building psyche" in value:
         return BusinessFactKind.COMPANY_DETAIL
-    if claim.fact_type == "visible_price":
+    if claim.fact_type in {"structured_price", "visible_price"}:
         return BusinessFactKind.PRICE
     if claim.fact_type == "pricing_plan":
         return BusinessFactKind.PACKAGING

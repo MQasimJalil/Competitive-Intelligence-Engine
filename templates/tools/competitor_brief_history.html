@@ -15,10 +15,10 @@
 <section class="hero history-hero">
   <div>
     <p class="dossier-kicker">Intelligence archive</p>
-    <h1>Dossier library</h1>
-    <p class="hero-copy">Reopen verified research, inspect evidence, or commission a new dossier.</p>
+    <h1>Brief library</h1>
+    <p class="hero-copy">Reopen verified briefs, inspect evidence, or generate a new brief.</p>
   </div>
-  <a class="button-link history-primary-action" href="/tools/competitor-brief">New snapshot</a>
+  <a class="button-link history-primary-action" href="/tools/competitor-brief">New brief</a>
 </section>
 
 <section class="history-summary" aria-label="Report history summary">
@@ -45,7 +45,7 @@
             {% if job.ai_requested is sameas true %}
               AI requested · 1 credit
             {% elif job.ai_requested is sameas false %}
-              Free report
+              Free brief
             {% else %}
               Legacy report
             {% endif %}
@@ -68,8 +68,8 @@
     <div class="history-empty">
       <p class="eyebrow">Workspace ready</p>
       <h2>No saved reports yet</h2>
-      <p>Generate a competitor snapshot to build your research library.</p>
-      <a class="button-link" href="/tools/competitor-brief">Generate first snapshot</a>
+      <p>Generate a competitive brief to build your research library.</p>
+      <a class="button-link" href="/tools/competitor-brief">Generate first brief</a>
     </div>
   {% endfor %}
 </div>

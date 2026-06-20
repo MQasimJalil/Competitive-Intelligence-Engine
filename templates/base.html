@@ -12,24 +12,26 @@
       <span class="brand-mark">CI</span>
       <span>
         <strong>Competitor Intelligence</strong>
-        <small>Public-source dossiers</small>
+        <small>Public-source briefs</small>
       </span>
     </a>
     <nav class="top-nav" aria-label="Primary">
-      <a
-        class="{{ 'active' if request.url.path != '/tools/competitor-brief/history' else '' }}"
-        href="/tools/competitor-brief"
-      >Research</a>
-      <a
-        class="{{ 'active' if request.url.path == '/tools/competitor-brief/history' else '' }}"
-        href="/tools/competitor-brief/history"
-      >Library</a>
-      {% if current_user is defined and current_user and current_user.role == "admin" %}
+      <div class="nav-links">
         <a
-          class="{{ 'active' if request.url.path == '/tools/competitor-brief/admin' else '' }}"
-          href="/tools/competitor-brief/admin"
-        >Admin</a>
-      {% endif %}
+          class="{{ 'active' if request.url.path == '/tools/competitor-brief' else '' }}"
+          href="/tools/competitor-brief"
+        >Research</a>
+        <a
+          class="{{ 'active' if request.url.path == '/tools/competitor-brief/history' else '' }}"
+          href="/tools/competitor-brief/history"
+        >Brief Library</a>
+        {% if current_user is defined and current_user and current_user.role == "admin" %}
+          <a
+            class="{{ 'active' if request.url.path == '/tools/competitor-brief/admin' else '' }}"
+            href="/tools/competitor-brief/admin"
+          >Admin</a>
+        {% endif %}
+      </div>
       {% if current_user is defined and current_user %}
         <form class="nav-logout" method="post" action="/auth/logout">
           <span>{{ current_user.name }}</span>

@@ -101,7 +101,10 @@ def describe_collection_failure(results: list[ExtractionResult]) -> str:
     if status and status >= 500:
         return f"The site returned a server error (HTTP {status})."
     if "could not be resolved" in notes or "no such host" in notes:
-        return "The domain could not be resolved. Check that it exists and is spelled correctly."
+        return (
+            "We couldn't find that domain. Check the spelling or try the company's "
+            "main website."
+        )
     if "timeout" in notes or "timed out" in notes:
         return "The site did not respond before the connection timed out."
     if result.status == ExtractionStatus.PARSE_FAILED:

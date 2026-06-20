@@ -343,6 +343,46 @@ def test_executive_report_parses_rupee_price_codes_and_symbols():
     assert report.quick_facts[1].value == "PKR 4,999 - PKR 12,500"
 
 
+def test_executive_report_prefers_structured_product_price_over_noisy_visible_price():
+    results = [
+        _result(
+            [
+                {
+                    "category": "products_modules",
+                    "fact_type": "structured_product",
+                    "value": "LUNAR 2 - PURPLE",
+                    "evidence_excerpt": "LUNAR 2 - PURPLE",
+                    "source_url": "https://sologk.com/products/lunar-2-purple",
+                },
+                {
+                    "category": "products_modules",
+                    "fact_type": "structured_price",
+                    "value": "GBP 35.00",
+                    "evidence_excerpt": "LUNAR 2 - PURPLE GBP 35.00",
+                    "source_url": "https://sologk.com/products/lunar-2-purple",
+                },
+                {
+                    "category": "products_modules",
+                    "fact_type": "visible_price",
+                    "value": "$70",
+                    "evidence_excerpt": "Noisy script value $70",
+                    "source_url": "https://sologk.com/products/lunar-2-purple",
+                },
+            ]
+        )
+    ]
+
+    report = build_executive_report(
+        "sologk.com",
+        results,
+        build_competitor_profile("sologk.com", results),
+    )
+
+    metrics = {fact.label: fact.value for fact in report.top_metrics}
+    assert metrics["Observed price band"] == "GBP 35"
+    assert "$70" not in report.quick_facts[1].value
+
+
 def test_executive_report_uses_type_aware_metrics_for_hosting_and_community_sites():
     hostinger_result = _result(
         [

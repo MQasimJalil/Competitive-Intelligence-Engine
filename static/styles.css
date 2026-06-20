@@ -946,6 +946,37 @@ body {
   color: var(--accent-deep);
 }
 
+.top-nav {
+  background: #f5f2e9;
+  border: 1px solid var(--dossier-black);
+  display: grid;
+  gap: 8px;
+  grid-template-columns: auto auto;
+  padding: 5px;
+}
+
+.nav-links {
+  display: inline-flex;
+  gap: 2px;
+}
+
+.top-nav a {
+  border-radius: 0;
+  color: var(--dossier-black);
+  font-family: "Cascadia Code", Consolas, monospace;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  padding: 12px 14px;
+  text-transform: uppercase;
+}
+
+.top-nav a:hover,
+.top-nav .active {
+  background: var(--dossier-black);
+  color: var(--dossier-ivory);
+}
+
 .container {
   max-width: 1240px;
   padding: 52px 24px 88px;
@@ -959,6 +990,17 @@ body {
   align-items: end;
   gap: clamp(40px, 7vw, 96px);
   grid-template-columns: minmax(0, 1.35fr) minmax(300px, 0.65fr);
+}
+
+.split-hero > .form-card {
+  grid-column: 1;
+  margin: 0;
+}
+
+.split-hero > .intelligence-rail {
+  align-self: stretch;
+  grid-column: 2;
+  grid-row: 1 / span 2;
 }
 
 .hero-copy-block {
@@ -1164,6 +1206,11 @@ button:active,
 .analysis-option:has(input:checked) {
   background: var(--accent-soft);
   border-color: #9fb1f1;
+}
+
+.analysis-option:focus-within {
+  outline: 3px solid var(--focus);
+  outline-offset: 3px;
 }
 
 .analysis-option input {
@@ -1725,6 +1772,7 @@ body {
 
 .container {
   max-width: 1360px;
+  padding-top: clamp(28px, 3.6vw, 46px);
 }
 
 .dossier-kicker {
@@ -1740,16 +1788,22 @@ body {
 .hero-copy-block h1,
 .history-hero h1 {
   color: var(--dossier-black);
-  font-size: clamp(3.8rem, 8vw, 8.6rem);
+  font-size: clamp(3.2rem, 5.75vw, 6.15rem);
   font-weight: 500;
-  letter-spacing: -0.085em;
-  line-height: 0.82;
-  max-width: 980px;
+  letter-spacing: -0.078em;
+  line-height: 0.86;
+  max-width: 780px;
 }
 
 .hero-copy {
   color: var(--dossier-muted);
-  max-width: 540px;
+  line-height: 1.45;
+  margin-top: 14px;
+  max-width: 620px;
+}
+
+.hero-copy-block {
+  padding: 0;
 }
 
 .trust-card,
@@ -1782,7 +1836,51 @@ body {
 .form-card {
   background: var(--dossier-ivory);
   border-left: 1px solid var(--dossier-black);
-  padding: clamp(22px, 4vw, 40px);
+  padding: clamp(18px, 2.5vw, 28px);
+}
+
+.split-hero {
+  align-items: start;
+  column-gap: clamp(24px, 4.4vw, 58px);
+  grid-template-columns: minmax(0, 1.08fr) minmax(286px, 0.56fr);
+  row-gap: clamp(10px, 1.6vw, 18px);
+}
+
+.split-hero > .form-card {
+  margin-top: 0;
+  max-width: 760px;
+}
+
+.split-hero > .intelligence-rail {
+  align-self: start;
+  min-height: 0;
+}
+
+.input-row {
+  gap: 10px;
+}
+
+.form-card input {
+  min-height: 44px;
+  padding: 11px 13px;
+}
+
+.form-card button {
+  min-height: 44px;
+  padding: 11px 18px;
+}
+
+.form-card .analysis-choice {
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.form-card .analysis-option {
+  padding: 10px 12px;
+}
+
+.form-card .hint {
+  margin-top: 14px;
 }
 
 input,
@@ -1815,6 +1913,7 @@ button,
   text-transform: uppercase;
   letter-spacing: 0.05em;
   font-size: 0.75rem;
+  min-height: 44px;
 }
 
 button:hover,
@@ -2069,11 +2168,58 @@ button:hover,
   margin: 0;
 }
 
+.app-header {
+  align-items: center;
+  background: rgba(245, 242, 233, 0.96);
+  border-bottom: 1px solid var(--dossier-black);
+  gap: 18px;
+}
+
+.brand-mark {
+  background: var(--dossier-black);
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.top-nav {
+  background: #f5f2e9;
+  border: 1px solid var(--dossier-black);
+  border-radius: 0;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: auto auto;
+  padding: 5px;
+}
+
+.nav-links {
+  display: inline-flex;
+  gap: 2px;
+}
+
+.top-nav a {
+  border-radius: 0;
+  color: var(--dossier-black);
+  font-family: "Cascadia Code", Consolas, monospace;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  padding: 12px 14px;
+  text-transform: uppercase;
+}
+
+.top-nav a:hover,
+.top-nav .active {
+  background: var(--dossier-black);
+  color: var(--dossier-ivory);
+}
+
 .nav-logout {
   align-items: center;
+  border-left: 1px solid var(--dossier-black);
   display: inline-flex;
-  gap: 10px;
+  gap: 8px;
   margin: 0;
+  padding-left: 8px;
 }
 
 .nav-logout span {
@@ -2088,7 +2234,138 @@ button:hover,
 
 .nav-logout button {
   font-size: 0.66rem;
-  padding: 9px 11px;
+  padding: 10px 12px;
+}
+
+.admin-tabs {
+  border-bottom: 1px solid var(--dossier-black);
+  display: flex;
+  gap: 0;
+  margin-top: 18px;
+}
+
+.admin-tabs a {
+  border: 1px solid var(--dossier-black);
+  border-bottom: 0;
+  color: var(--dossier-black);
+  font-family: "Cascadia Code", Consolas, monospace;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  margin-right: -1px;
+  padding: 13px 18px;
+  text-decoration: none;
+  text-transform: uppercase;
+}
+
+.admin-tabs a:hover,
+.admin-tabs .active {
+  background: var(--dossier-black);
+  color: var(--dossier-ivory);
+}
+
+.admin-dashboard-grid {
+  display: grid;
+  gap: 18px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  padding: 22px 0;
+}
+
+.admin-panel {
+  border: 1px solid var(--dossier-black);
+  padding: 22px;
+}
+
+.admin-panel h2 {
+  font-size: clamp(1.7rem, 4vw, 3.2rem);
+  font-weight: 520;
+  letter-spacing: -0.06em;
+  margin-bottom: 18px;
+}
+
+.admin-panel-wide {
+  grid-column: 1 / -1;
+}
+
+.stacked-bar {
+  background: #d8d1bf;
+  border: 1px solid var(--dossier-black);
+  display: flex;
+  height: 42px;
+  overflow: hidden;
+}
+
+.stacked-bar span {
+  display: block;
+  min-width: 0;
+}
+
+.bar-complete,
+.legend-complete {
+  background: var(--dossier-signal);
+}
+
+.bar-partial,
+.legend-partial {
+  background: #f3c969;
+}
+
+.bar-failed,
+.legend-failed {
+  background: #11110f;
+}
+
+.admin-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-top: 14px;
+}
+
+.admin-legend span {
+  align-items: center;
+  color: var(--dossier-muted);
+  display: inline-flex;
+  font-family: "Cascadia Code", Consolas, monospace;
+  font-size: 0.7rem;
+  gap: 7px;
+}
+
+.admin-legend b {
+  border: 1px solid var(--dossier-black);
+  display: inline-block;
+  height: 10px;
+  width: 10px;
+}
+
+.cost-row,
+.usage-bar-row {
+  align-items: center;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: minmax(100px, 0.25fr) minmax(0, 1fr) auto;
+  padding: 10px 0;
+}
+
+.cost-row span,
+.usage-bar-row span {
+  color: var(--dossier-muted);
+  font-family: "Cascadia Code", Consolas, monospace;
+  font-size: 0.72rem;
+}
+
+.cost-row div,
+.usage-bar-row div {
+  background: #d8d1bf;
+  border: 1px solid var(--dossier-black);
+  height: 16px;
+}
+
+.cost-row i,
+.usage-bar-row i {
+  background: var(--dossier-black);
+  display: block;
+  height: 100%;
 }
 
 .auth-shell {
@@ -2390,10 +2667,6 @@ button:hover,
   text-underline-offset: 2px;
 }
 
-.dossier-card-blue a {
-  color: var(--dossier-signal);
-}
-
 .final-implications {
   background: var(--dossier-black);
   color: var(--dossier-ivory);
@@ -2409,6 +2682,47 @@ button:hover,
 }
 
 @media (max-width: 920px) {
+  .app-header {
+    align-items: stretch;
+    display: grid;
+  }
+
+  .top-nav {
+    grid-template-columns: 1fr;
+  }
+
+  .nav-links {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .nav-logout {
+    border-left: 0;
+    border-top: 1px solid var(--dossier-black);
+    justify-content: space-between;
+    padding-left: 0;
+    padding-top: 6px;
+  }
+
+  .admin-dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-tabs {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .admin-tabs a {
+    margin-right: 0;
+    text-align: center;
+  }
+
+  .cost-row,
+  .usage-bar-row {
+    grid-template-columns: 1fr;
+  }
+
   .dossier-metrics {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -2455,14 +2769,52 @@ button:hover,
   }
 }
 
+@media (max-width: 1200px) and (min-width: 821px) {
+  .container {
+    padding-top: 28px;
+  }
+
+  .split-hero {
+    column-gap: 28px;
+    grid-template-columns: minmax(0, 1fr) minmax(250px, 0.44fr);
+    row-gap: 10px;
+  }
+
+  .hero-copy-block h1 {
+    font-size: clamp(3rem, 5.4vw, 4.7rem);
+    max-width: 620px;
+  }
+
+  .dossier-kicker {
+    margin-bottom: 10px;
+  }
+
+  .hero-copy {
+    max-width: 560px;
+  }
+
+  .split-hero > .form-card {
+    margin-top: 0;
+  }
+
+  .intelligence-rail {
+    padding: 4px 18px;
+  }
+
+  .rail-step {
+    padding: 13px 0;
+  }
+}
+
 @media (max-width: 640px) {
   .container {
-    padding: 26px 12px 56px;
+    padding: 16px 12px 56px;
   }
 
   .app-header {
-    gap: 14px;
-    padding: 12px;
+    gap: 10px;
+    min-height: 0;
+    padding: 10px 12px;
   }
 
   .brand {
@@ -2471,18 +2823,52 @@ button:hover,
 
   .top-nav {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: 1fr;
+  }
+
+  .nav-links {
+    grid-template-columns: 1fr;
   }
 
   .top-nav a {
+    min-height: 44px;
+    padding: 13px 10px;
     text-align: center;
   }
 
   .hero-copy-block h1,
   .history-hero h1,
   .executive-header h1 {
-    font-size: clamp(2.7rem, 16vw, 4.5rem);
-    letter-spacing: -0.075em;
+    font-size: clamp(2.35rem, 12vw, 3.35rem);
+    letter-spacing: -0.07em;
+  }
+
+  .split-hero {
+    gap: 14px;
+  }
+
+  .hero-copy-block {
+    padding: 0;
+  }
+
+  .hero-copy {
+    font-size: 0.95rem;
+    line-height: 1.45;
+    margin-bottom: 0;
+  }
+
+  .split-hero > .form-card,
+  .split-hero > .intelligence-rail {
+    grid-column: 1;
+    grid-row: auto;
+  }
+
+  .intelligence-rail {
+    padding: 14px 18px;
+  }
+
+  .rail-step {
+    padding: 11px 0;
   }
 
   .profile-sheet,
@@ -2536,6 +2922,18 @@ button:hover,
 
   .dossier-table-row span {
     overflow-wrap: anywhere;
+  }
+
+  .dossier-table-row span[data-label]::before {
+    color: var(--dossier-muted);
+    content: attr(data-label);
+    display: block;
+    font-family: "Cascadia Code", Consolas, monospace;
+    font-size: 0.64rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    margin-bottom: 4px;
+    text-transform: uppercase;
   }
 
   .admin-table,

@@ -24,6 +24,20 @@ docker compose up --build -d
 
 Open `http://127.0.0.1:8000/tools/competitor-brief`.
 
+The Compose file binds the backend to `127.0.0.1:8000` so nginx/Caddy can be the
+only public HTTPS entrypoint. For a public VPS behind HTTPS, set these in your
+ignored `.env` file:
+
+```dotenv
+APP_ENV="production"
+APP_BASE_URL="https://your-domain.example"
+SESSION_COOKIE_SECURE="true"
+AUTH_SECRET="replace-with-a-long-random-string"
+```
+
+Do not expose the backend container directly on `0.0.0.0:8000` unless you are
+intentionally running without a reverse proxy.
+
 Useful commands:
 
 ```powershell
@@ -61,6 +75,7 @@ before the first startup:
 ```dotenv
 AUTH_SECRET="replace-with-a-long-random-string"
 USER_REPOSITORY="postgres"
+SESSION_COOKIE_SECURE="true"
 ADMIN_NAME="Your Name"
 ADMIN_EMAIL="you@example.com"
 ADMIN_PASSWORD="temporary-strong-password"
@@ -69,6 +84,19 @@ ADMIN_PASSWORD="temporary-strong-password"
 When the user table is empty, the app creates this admin account automatically.
 After login, open `/tools/competitor-brief/admin` to create named tester accounts
 with name, email, password, and role.
+
+Internal tester safety limits are enabled by default:
+
+```dotenv
+JOB_RATE_LIMIT_WINDOW_SECONDS="60"
+JOB_RATE_LIMIT_MAX_PER_WINDOW="6"
+JOB_USER_CONCURRENCY_LIMIT="1"
+JOB_GLOBAL_CONCURRENCY_LIMIT="3"
+POSTGRES_POOL_MAX_SIZE="8"
+```
+
+These protect browser rendering, AI, Apify, and database resources during early
+testing. Raise them only after you know the VPS capacity and API spend.
 
 To enable optional Apify enrichment, add:
 

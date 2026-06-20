@@ -3,22 +3,81 @@
 <header class="admin-masthead">
   <div>
     <p class="dossier-kicker">Private administration</p>
-    <h1>Operations dashboard</h1>
+    <h1>Admin dashboard</h1>
     <p>
-      User usage, report volume, and estimated provider spend. Report subjects are hidden.
+      User management, usage trends, and estimated provider spend. Report subjects stay hidden.
     </p>
   </div>
   <a class="button-link" href="/tools/competitor-brief">New research run</a>
 </header>
 
+<nav class="admin-tabs" aria-label="Admin sections">
+  <a class="{{ 'active' if active_tab == 'dashboard' else '' }}" href="/tools/competitor-brief/admin?tab=dashboard">Dashboard</a>
+  <a class="{{ 'active' if active_tab == 'users' else '' }}" href="/tools/competitor-brief/admin?tab=users">Users</a>
+  <a class="{{ 'active' if active_tab == 'usage' else '' }}" href="/tools/competitor-brief/admin?tab=usage">Usage</a>
+</nav>
+
+{% if active_tab == "dashboard" %}
 <section class="admin-metrics" aria-label="Operations summary">
   <div><strong>{{ summary.total_users }}</strong><span>Users</span></div>
   <div><strong>{{ summary.total_reports }}</strong><span>Total reports</span></div>
   <div><strong>{{ summary.complete_reports }}</strong><span>Complete</span></div>
+  <div><strong>{{ summary.partial_reports }}</strong><span>Partial</span></div>
   <div><strong>{{ summary.ai_successes }}/{{ summary.ai_requested }}</strong><span>AI successes</span></div>
-  <div><strong>${{ "%.4f"|format(summary.total_ai_cost_usd) }}</strong><span>Total AI cost</span></div>
-  <div><strong>${{ "%.4f"|format(summary.total_apify_cost_usd) }}</strong><span>Total Apify cost</span></div>
+  <div><strong>${{ "%.4f"|format(summary.total_estimated_cost_usd) }}</strong><span>Total cost</span></div>
 </section>
+
+<section class="admin-dashboard-grid">
+  <article class="admin-panel">
+    <p class="dossier-kicker">Status mix</p>
+    <h2>Report health</h2>
+    {% set total = summary.total_reports or 1 %}
+    <div class="stacked-bar" aria-label="Report status mix">
+      <span class="bar-complete" style="width: {{ (summary.complete_reports / total * 100) | round(1) }}%"></span>
+      <span class="bar-partial" style="width: {{ (summary.partial_reports / total * 100) | round(1) }}%"></span>
+      <span class="bar-failed" style="width: {{ (summary.failed_reports / total * 100) | round(1) }}%"></span>
+    </div>
+    <div class="admin-legend">
+      <span><b class="legend-complete"></b>{{ summary.complete_reports }} complete</span>
+      <span><b class="legend-partial"></b>{{ summary.partial_reports }} partial</span>
+      <span><b class="legend-failed"></b>{{ summary.failed_reports }} failed</span>
+    </div>
+  </article>
+
+  <article class="admin-panel">
+    <p class="dossier-kicker">Cost split</p>
+    <h2>Provider spend</h2>
+    {% set cost_total = summary.total_estimated_cost_usd or 1 %}
+    <div class="cost-row">
+      <span>AI</span>
+      <div><i style="width: {{ (summary.total_ai_cost_usd / cost_total * 100) | round(1) }}%"></i></div>
+      <strong>${{ "%.4f"|format(summary.total_ai_cost_usd) }}</strong>
+    </div>
+    <div class="cost-row">
+      <span>Apify</span>
+      <div><i style="width: {{ (summary.total_apify_cost_usd / cost_total * 100) | round(1) }}%"></i></div>
+      <strong>${{ "%.4f"|format(summary.total_apify_cost_usd) }}</strong>
+    </div>
+  </article>
+
+  <article class="admin-panel admin-panel-wide">
+    <p class="dossier-kicker">Reports by user</p>
+    <h2>Tester activity</h2>
+    <div class="usage-bars">
+      {% for user in users[:8] %}
+        {% set width = (user.total_reports / (summary.max_user_reports or 1) * 100) | round(1) %}
+        <div class="usage-bar-row">
+          <span>{{ user.name }}</span>
+          <div><i style="width: {{ width }}%"></i></div>
+          <strong>{{ user.total_reports }}</strong>
+        </div>
+      {% else %}
+        <p class="muted-line">No report activity recorded yet.</p>
+      {% endfor %}
+    </div>
+  </article>
+</section>
+{% endif %}
 
 <section class="admin-privacy-note">
   <strong>Privacy rule</strong>
@@ -28,10 +87,11 @@
   </p>
 </section>
 
+{% if active_tab == "users" %}
 <section class="admin-user-panel">
   <div>
-    <p class="dossier-kicker">Tester access</p>
-    <h2>Add user</h2>
+    <p class="dossier-kicker">User management</p>
+    <h2>Create user</h2>
     <p class="muted-line">Create named accounts for internal testers or another admin.</p>
     {% if user_error %}
       <div class="notice error">{{ user_error }}</div>
@@ -93,4 +153,78 @@
     </tbody>
   </table>
 </section>
+{% elif active_tab == "usage" %}
+<section class="admin-dashboard-grid">
+  <article class="admin-panel admin-panel-wide">
+    <p class="dossier-kicker">Usage breakdown</p>
+    <h2>Reports by user</h2>
+    <div class="usage-bars">
+      {% for user in users %}
+        {% set width = (user.total_reports / (summary.max_user_reports or 1) * 100) | round(1) %}
+        <div class="usage-bar-row">
+          <span>{{ user.name }}</span>
+          <div><i style="width: {{ width }}%"></i></div>
+          <strong>{{ user.total_reports }} reports</strong>
+        </div>
+      {% else %}
+        <p class="muted-line">No report activity recorded yet.</p>
+      {% endfor %}
+    </div>
+  </article>
+
+  <article class="admin-panel admin-panel-wide">
+    <p class="dossier-kicker">Provider cost by user</p>
+    <h2>Estimated spend</h2>
+    <div class="usage-bars">
+      {% for user in users %}
+        {% set width = (user.total_estimated_cost_usd / (summary.max_user_cost_usd or 1) * 100) | round(1) %}
+        <div class="usage-bar-row">
+          <span>{{ user.name }}</span>
+          <div><i style="width: {{ width }}%"></i></div>
+          <strong>${{ "%.4f"|format(user.total_estimated_cost_usd) }}</strong>
+        </div>
+      {% else %}
+        <p class="muted-line">No provider spend recorded yet.</p>
+      {% endfor %}
+    </div>
+  </article>
+</section>
+
+<section class="admin-table-wrap">
+  <table class="admin-table">
+    <thead>
+      <tr>
+        <th>User</th>
+        <th>Reports</th>
+        <th>Status mix</th>
+        <th>AI usage</th>
+        <th>AI cost</th>
+        <th>Apify cost</th>
+        <th>Total cost</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for user in users %}
+      <tr>
+        <td>
+          <strong>{{ user.name }}</strong>
+          <small>{{ user.email or user.owner_id }} · {{ user.role }}</small>
+        </td>
+        <td>{{ user.total_reports }}</td>
+        <td>
+          {{ user.complete_reports }} complete<br>
+          <small>{{ user.partial_reports }} partial / {{ user.failed_reports }} failed</small>
+        </td>
+        <td>{{ user.ai_successes }}/{{ user.ai_requested }} successes</td>
+        <td>${{ "%.4f"|format(user.total_ai_cost_usd) }}</td>
+        <td>${{ "%.4f"|format(user.total_apify_cost_usd) }}</td>
+        <td><strong>${{ "%.4f"|format(user.total_estimated_cost_usd) }}</strong></td>
+      </tr>
+      {% else %}
+      <tr><td colspan="7">No user activity recorded.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endif %}
 {% endblock %}

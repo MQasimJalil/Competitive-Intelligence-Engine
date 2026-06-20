@@ -143,10 +143,7 @@ def build_executive_report(
     collection_names = _unique(
         claim.value for claim in collection_claims if claim.value.casefold() not in _GENERIC_VALUES
     )
-    price_claims = _ranked(
-        [claim for claim in claims if claim.fact_type == "visible_price"],
-        prefer=("visible_price",),
-    )
+    price_claims = _select_price_claims(claims)
     prices = _unique(claim.value for claim in price_claims)
     price_range_claims = _price_range_claims(price_claims)
     offer_claims = _offer_claims(business_profile)
@@ -589,6 +586,29 @@ def _price_range_claims(price_claims: list[ObservedClaim]) -> list[ObservedClaim
             )
         )
     return candidates[:1]
+
+
+def _select_price_claims(claims: list[ObservedClaim]) -> list[ObservedClaim]:
+    structured = _ranked(
+        [claim for claim in claims if claim.fact_type == "structured_price"],
+        prefer=("structured_price",),
+    )
+    if not structured:
+        return _ranked(
+            [claim for claim in claims if claim.fact_type == "visible_price"],
+            prefer=("visible_price",),
+        )
+    structured_sources = {str(claim.source_url) for claim in structured}
+    visible = _ranked(
+        [
+            claim
+            for claim in claims
+            if claim.fact_type == "visible_price"
+            and str(claim.source_url) not in structured_sources
+        ],
+        prefer=("visible_price",),
+    )
+    return [*structured, *visible]
 
 
 def _flagship_product_claims(
@@ -1165,6 +1185,7 @@ def _deduplicate_claims(claims: list[ObservedClaim]) -> list[ObservedClaim]:
         if len(key) < 12 and claim.fact_type not in {
             "page_headline",
             "structured_product",
+            "structured_price",
             "linked_product",
             "product_collection",
             "visible_price",

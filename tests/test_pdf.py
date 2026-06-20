@@ -83,6 +83,37 @@ def test_pdf_includes_ai_analysis_when_available():
     assert "F001" in text
 
 
+def test_pdf_moves_ai_analysis_near_top_before_evidence_coverage():
+    result = ExtractionResult(
+        value={
+            "claims": [
+                {
+                    "category": "positioning",
+                    "fact_type": "page_claim",
+                    "value": "A concise public claim.",
+                    "evidence_excerpt": "A concise public claim.",
+                    "source_url": "https://example.com/about",
+                }
+            ]
+        },
+        source_url="https://example.com/about",
+        extractor_name="positioning_facts",
+        confidence=0.8,
+        status=ExtractionStatus.OK,
+    )
+    profile = build_competitor_profile("example.com", [result])
+    analysis = AIAnalysis(
+        summary=[CitedStatement(text="The company makes a concise claim.", citation_ids=["F001"])]
+    )
+    report = build_report_view("example.com", [result], profile, ai_analysis=analysis)
+
+    reader = PdfReader(BytesIO(render_competitor_pdf_bytes(report)))
+    text = "\n".join(page.extract_text() for page in reader.pages)
+
+    assert text.index("Strategic Analysis") < text.index("Evidence Coverage")
+    assert text.index("Strategic Analysis") < text.index("Product & Pricing Map")
+
+
 def test_pdf_uses_complete_sentence_for_thirty_second_read():
     result = ExtractionResult(
         value={

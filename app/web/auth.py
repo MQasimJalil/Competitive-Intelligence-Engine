@@ -47,7 +47,7 @@ def login_submit(
         create_session_token(user.user_id),
         max_age=settings.session_max_age_seconds,
         httponly=True,
-        secure=settings.app_env == "production",
+        secure=settings.session_cookie_secure,
         samesite="lax",
     )
     return response

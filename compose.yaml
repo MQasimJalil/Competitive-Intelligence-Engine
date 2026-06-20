@@ -14,7 +14,7 @@ services:
       USER_REPOSITORY: postgres
       RENDERED_BROWSER_CHANNEL: ""
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"
     volumes:
       - competitor_brief_app_data:/app/var
     depends_on:

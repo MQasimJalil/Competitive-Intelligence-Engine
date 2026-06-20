@@ -1,3 +1,5 @@
+from dataclasses import replace
+
 from app.auth.store import FileUserStore
 from app.jobs.store import FileJobStore
 from app.main import app
@@ -33,6 +35,26 @@ def test_history_requires_login(tmp_path, monkeypatch):
 
     assert response.status_code == 303
     assert response.headers["location"].startswith("/auth/login")
+
+
+def test_login_cookie_uses_explicit_secure_cookie_setting(tmp_path, monkeypatch):
+    user_store, _job_store = _configure_auth(monkeypatch, tmp_path)
+    user_store.create_user(
+        name="Tester One",
+        email="tester@example.com",
+        password="tester-password",
+    )
+    monkeypatch.setattr(
+        web_auth,
+        "settings",
+        replace(web_auth.settings, app_env="testing", session_cookie_secure=True),
+    )
+    client = TestClient(app)
+
+    response = _login(client, "tester@example.com", "tester-password")
+
+    assert response.status_code == 303
+    assert "secure" in response.headers["set-cookie"].lower()
 
 
 def test_logged_in_user_sees_only_their_own_library(tmp_path, monkeypatch):
@@ -102,6 +124,52 @@ def test_admin_dashboard_shows_user_names_without_report_subjects(tmp_path, monk
     assert "admin-target.example" not in response.text
 
 
+def test_admin_dashboard_has_dashboard_users_and_usage_tabs_without_report_subjects(
+    tmp_path, monkeypatch
+):
+    user_store, job_store = _configure_auth(monkeypatch, tmp_path)
+    user_store.create_user(
+        name="Admin User",
+        email="admin@example.com",
+        password="admin-password",
+        role="admin",
+    )
+    tester = user_store.create_user(
+        name="Tester User",
+        email="tester@example.com",
+        password="tester-password",
+    )
+    complete = job_store.create("hidden-complete.example", owner_id=tester.user_id)
+    complete.status = JobStatus.COMPLETE
+    job_store.save(complete)
+    partial = job_store.create("hidden-partial.example", owner_id=tester.user_id)
+    partial.status = JobStatus.PARTIAL
+    job_store.save(partial)
+    client = TestClient(app)
+    _login(client, "admin@example.com", "admin-password")
+
+    dashboard = client.get("/tools/competitor-brief/admin")
+    users = client.get("/tools/competitor-brief/admin?tab=users")
+    usage = client.get("/tools/competitor-brief/admin?tab=usage")
+
+    assert dashboard.status_code == 200
+    assert "Admin dashboard" in dashboard.text
+    assert "Status mix" in dashboard.text
+    assert "Cost split" in dashboard.text
+    assert "href=\"/tools/competitor-brief/admin?tab=users\"" in dashboard.text
+    assert "hidden-complete.example" not in dashboard.text
+    assert users.status_code == 200
+    assert "User management" in users.text
+    assert "Create user" in users.text
+    assert "Tester User" in users.text
+    assert "hidden-partial.example" not in users.text
+    assert usage.status_code == 200
+    assert "Usage breakdown" in usage.text
+    assert "Reports by user" in usage.text
+    assert "Provider cost by user" in usage.text
+    assert "hidden-complete.example" not in usage.text
+
+
 def test_admin_can_create_named_tester_account(tmp_path, monkeypatch):
     user_store, _job_store = _configure_auth(monkeypatch, tmp_path)
     user_store.create_user(
@@ -126,7 +194,7 @@ def test_admin_can_create_named_tester_account(tmp_path, monkeypatch):
 
     saved = user_store.get_by_email("tester@example.com")
     assert response.status_code == 303
-    assert response.headers["location"] == "/tools/competitor-brief/admin"
+    assert response.headers["location"] == "/tools/competitor-brief/admin?tab=users"
     assert saved is not None
     assert saved.name == "Research Tester"
     assert saved.role == "tester"

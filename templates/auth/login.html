@@ -5,13 +5,14 @@
     <p class="dossier-kicker">Private beta</p>
     <h1>Sign in</h1>
     <p class="hero-copy">
-      Access is limited to invited internal testers. Reports stay tied to your account.
+      Access is currently limited to invited testers. Your briefs and evidence files stay
+      tied to your account. Need access or forgot your password? Contact the project owner.
     </p>
   </div>
 
   <form method="post" class="card auth-card">
     {% if error %}
-      <div class="notice error">{{ error }}</div>
+      <div class="notice error" role="alert">{{ error }}</div>
     {% endif %}
     <input type="hidden" name="next" value="{{ next }}">
     <label for="email">Email</label>

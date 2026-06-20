@@ -126,6 +126,33 @@ def test_product_extractor_finds_price_next_to_product_link():
     assert "Lunar glove" in price.evidence_excerpt
 
 
+def test_product_extractor_uses_open_graph_product_price_metadata():
+    html = """
+    <html>
+      <head>
+        <meta property="og:url" content="https://sologk.com/products/lunar-2-purple">
+        <meta property="og:title" content="LUNAR 2 - PURPLE">
+        <meta property="og:type" content="product">
+        <meta property="og:price:amount" content="35.00">
+        <meta property="og:price:currency" content="GBP">
+      </head>
+      <body><main><h1>LUNAR 2 - PURPLE</h1></main></body>
+    </html>
+    """
+
+    fact = extract_gtm_page_fact(
+        html,
+        "https://sologk.com/products/lunar-2-purple",
+        "products_modules",
+    )
+
+    prices = [claim for claim in fact.claims if claim.fact_type == "structured_price"]
+    products = [claim for claim in fact.claims if claim.fact_type == "structured_product"]
+    assert prices[0].value == "GBP 35.00"
+    assert prices[0].evidence_excerpt == "LUNAR 2 - PURPLE GBP 35.00"
+    assert products[0].value == "LUNAR 2 - PURPLE"
+
+
 def test_pricing_extractor_captures_tier_capabilities():
     html = """
     <main>

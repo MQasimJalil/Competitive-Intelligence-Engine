@@ -128,6 +128,7 @@ def extract_gtm_page_fact(
     )
     visible_text = content_root.get_text(" ", strip=True)
     claims = _extract_claims(
+        soup=soup,
         root=content_root,
         evidence_texts=evidence_texts,
         visible_text=visible_text,
@@ -146,6 +147,7 @@ def extract_gtm_page_fact(
 
 def _extract_claims(
     *,
+    soup: BeautifulSoup,
     root: Tag,
     evidence_texts: list[str],
     visible_text: str,
@@ -165,6 +167,8 @@ def _extract_claims(
                 "Visible page headline",
             )
         )
+    if category in {BusinessCategory.PRICING_PACKAGING, BusinessCategory.PRODUCTS_MODULES}:
+        claims.extend(_structured_product_metadata(soup, source_url, category))
     for excerpt in evidence_texts[:24]:
         if len(excerpt) < 20:
             continue
@@ -345,6 +349,59 @@ def _claim(
         source_url=source_url,
         context=context,
     )
+
+
+def _structured_product_metadata(
+    soup: BeautifulSoup,
+    source_url: str,
+    category: BusinessCategory,
+) -> list[ObservedClaim]:
+    title = _meta_content(soup, "og:title") or _meta_content(soup, "twitter:title")
+    product_type = _meta_content(soup, "og:type").casefold()
+    amount = _meta_content(soup, "og:price:amount") or _meta_content(
+        soup,
+        "product:price:amount",
+    )
+    currency = _meta_content(soup, "og:price:currency") or _meta_content(
+        soup,
+        "product:price:currency",
+    )
+    looks_like_product = product_type == "product" or "/products/" in source_url.casefold()
+    claims: list[ObservedClaim] = []
+    if title and looks_like_product:
+        claims.append(
+            _claim(
+                category,
+                "structured_product",
+                title,
+                title,
+                source_url,
+                "Open Graph product title metadata",
+            )
+        )
+    if amount and currency and looks_like_product:
+        normalized_currency = currency.strip().upper()
+        normalized_amount = amount.strip()
+        value = f"{normalized_currency} {normalized_amount}"
+        excerpt = f"{title} {value}".strip()
+        claims.append(
+            _claim(
+                category,
+                "structured_price",
+                value,
+                excerpt,
+                source_url,
+                "Open Graph product price metadata",
+            )
+        )
+    return claims
+
+
+def _meta_content(soup: BeautifulSoup, key: str) -> str:
+    tag = soup.find("meta", attrs={"property": key}) or soup.find("meta", attrs={"name": key})
+    if not tag:
+        return ""
+    return _clean_text(str(tag.get("content", "")))
 
 
 def _remove_noise(root: Tag) -> None:
@@ -605,6 +662,8 @@ def _deduplicate_claims(claims: Iterable[ObservedClaim]) -> list[ObservedClaim]:
 
 def _prioritize_claims(claims: list[ObservedClaim]) -> list[ObservedClaim]:
     priority = {
+        "structured_product": 110,
+        "structured_price": 108,
         "linked_product": 105,
         "product_collection": 104,
         "visible_price": 100,

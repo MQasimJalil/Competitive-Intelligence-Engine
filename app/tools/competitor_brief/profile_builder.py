@@ -48,6 +48,7 @@ SECTION_DEFINITIONS = (
 )
 
 FACT_LABELS = {
+    "structured_price": "Structured product price",
     "visible_price": "Visible price",
     "proof_metric": "Proof metric",
     "cta": "Buyer CTA",
@@ -64,6 +65,7 @@ FACT_LABELS = {
 }
 
 FACT_PRIORITY = {
+    "structured_price": 105,
     "visible_price": 100,
     "proof_metric": 95,
     "cta": 90,
