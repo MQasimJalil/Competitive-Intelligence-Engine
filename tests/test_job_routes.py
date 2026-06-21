@@ -50,10 +50,14 @@ def test_tool_page_offers_free_and_ai_report_choices(tmp_path, monkeypatch):
 
     assert response.status_code == 200
     assert "Free brief" in response.text
-    assert "AI analysis" in response.text
+    assert "Strategic analysis" in response.text
     assert "1 credit" in response.text
     assert "scanProgress.hidden = true" in response.text
     assert 'loadingMessage.classList.add("error")' in response.text
+    assert "scanForm.reportValidity()" in response.text
+    assert 'domainInput.addEventListener("invalid"' in response.text
+    assert "We will show the new brief when it is ready" in response.text
+    assert "focus({ preventScroll: true })" in response.text
 
 
 def test_tool_page_polling_resets_ui_when_late_poll_fails(tmp_path, monkeypatch):
@@ -279,7 +283,7 @@ def test_admin_dashboard_shows_user_cost_rollups_without_report_subjects(tmp_pat
     response = client.get("/tools/competitor-brief/admin")
 
     assert response.status_code == 200
-    assert "Operations dashboard" in response.text
+    assert "Admin dashboard" in response.text
     assert "Route Tester" in response.text
     assert "secret-target.example" not in response.text
     assert f"/jobs/{job.job_id}/report" not in response.text
@@ -324,6 +328,9 @@ def test_customer_report_hides_operational_ai_metadata(tmp_path, monkeypatch):
     assert "420 tokens" not in response.text
     assert "Prompt v1" not in response.text
     assert "Verified report ready without AI analysis" in response.text
+    assert "Download brief PDF" in response.text
+    assert "Download evidence appendix" in response.text
+    assert "Print report" in response.text
 
 
 def test_feedback_route_persists_feedback_for_owned_job(tmp_path, monkeypatch):

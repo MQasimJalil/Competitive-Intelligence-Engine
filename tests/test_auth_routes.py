@@ -100,6 +100,27 @@ def test_logged_in_header_includes_accessible_mobile_menu(tmp_path, monkeypatch)
     assert "Menu" in response.text
 
 
+def test_login_page_explains_private_beta_and_support_path(monkeypatch):
+    monkeypatch.setattr(
+        web_auth,
+        "settings",
+        replace(
+            web_auth.settings,
+            support_email="owner@example.com",
+        ),
+    )
+    client = TestClient(app)
+
+    response = client.get("/auth/login")
+
+    assert response.status_code == 200
+    assert "Generate cited competitive briefs from public web pages" in response.text
+    assert "Request beta access" in response.text
+    assert "Forgot password" in response.text
+    assert "mailto:owner@example.com" in response.text
+    assert "Public pages only" in response.text
+
+
 def test_non_admin_cannot_open_admin_dashboard(tmp_path, monkeypatch):
     user_store, _job_store = _configure_auth(monkeypatch, tmp_path)
     user_store.create_user(

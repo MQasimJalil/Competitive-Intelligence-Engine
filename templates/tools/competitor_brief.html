@@ -23,8 +23,9 @@
       name="domain"
       type="text"
       inputmode="url"
+      autocomplete="url"
       placeholder="example.com"
-      pattern="^(https?://)?([a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}(/.*)?$"
+      pattern="(https?://)?([A-Za-z0-9]+(-[A-Za-z0-9]+)*\.)+[A-Za-z]{2,}(/.*)?"
       title="Enter a public website, such as example.com or https://example.com."
       value="{{ domain }}"
       required
@@ -52,8 +53,7 @@
       <b>1 credit</b>
     </label>
     <p class="analysis-note">
-      AI analysis runs only after validation and only when analysis is available.
-      No AI result means no credit should be charged.
+      Credits are charged only when strategic analysis completes. Free briefs never use AI credits.
     </p>
   </fieldset>
   <p class="hint" id="domain-help">
@@ -112,7 +112,7 @@
           {% if report.ai_analysis %}
             AI analysis included.
           {% elif report.ai_analysis_status in ["failed", "budget_blocked"] %}
-            Strategic analysis was unavailable; deterministic evidence remains available.
+            Strategic analysis was unavailable; cited findings remain available.
           {% endif %}
         </p>
       </div>
@@ -120,18 +120,25 @@
         <form method="post" action="/tools/competitor-brief/pdf">
           <input type="hidden" name="domain" value="{{ report.domain }}">
           <input type="hidden" name="job_id" value="{{ report.job_id }}">
-          <button type="submit">Download brief</button>
+          <button type="submit">Download brief PDF</button>
         </form>
         <form method="post" action="/tools/competitor-brief/evidence">
           <input type="hidden" name="domain" value="{{ report.domain }}">
           <input type="hidden" name="job_id" value="{{ report.job_id }}">
-          <button type="submit" class="secondary-button">Download appendix</button>
+          <button type="submit" class="secondary-button">Download evidence appendix</button>
         </form>
-        <button type="button" class="secondary-button" onclick="window.print()">Print</button>
+        <button type="button" class="secondary-button" onclick="window.print()">Print report</button>
       </div>
     </header>
 
-    <section class="dossier-metrics" aria-label="Dossier summary metrics">
+    <nav class="report-jump-nav no-print" aria-label="Brief sections">
+      <a href="#summary">Summary</a>
+      <a href="#analysis">Analysis</a>
+      <a href="#offer-map">Offer map</a>
+      <a href="#sources">Sources</a>
+    </nav>
+
+    <section class="dossier-metrics" id="summary" aria-label="Brief summary metrics">
       {% for fact in report.executive.top_metrics %}
         <div>
           <strong>{{ fact.value }}</strong>
@@ -152,7 +159,7 @@
       </p>
     </section>
 
-    <section class="dossier-card dossier-card-amber">
+    <section class="dossier-card dossier-card-amber" id="analysis">
       <p class="dossier-section-label">Strategic read</p>
       <div>
         {% set strategic_rendered = false %}
@@ -169,7 +176,7 @@
     </section>
 
     {% if report.ai_analysis %}
-      <section class="dossier-section ai-analysis">
+      <section class="dossier-section ai-analysis" id="strategic-analysis">
         <p class="dossier-section-label">Evidence-constrained analysis</p>
         <h2>Strategic analysis</h2>
         <div class="analysis-grid">
@@ -201,7 +208,7 @@
     {% elif report.ai_analysis_status in ["failed", "budget_blocked"] %}
       <div class="notice report-note">
         <strong>Verified report ready without AI analysis.</strong>
-        The cited evidence and deterministic findings remain available.
+        The cited findings remain available.
       </div>
     {% endif %}
 
@@ -209,7 +216,7 @@
       <p class="dossier-section-label">Evidence coverage</p>
       <ul class="clean-list">
         <li>{{ report.executive.coverage_explained }}</li>
-          <li>{{ report.executive.sources | length }} compact source references cited.</li>
+          <li>{{ report.executive.sources | length }} source references cited.</li>
         {% if report.executive.unknowns %}
           <li>Not verified: {{ report.executive.unknowns[:2] | join("; ") }}.</li>
         {% endif %}
@@ -250,7 +257,7 @@
       </div>
     </section>
 
-    <section class="dossier-section">
+    <section class="dossier-section" id="offer-map">
       <h2>Product and pricing map</h2>
       <p class="section-description">
         The offer map is assembled from validated product, pricing, and positioning evidence.
@@ -373,7 +380,7 @@
       </div>
     </section>
 
-    <section class="dossier-section">
+    <section class="dossier-section" id="sources">
       <h2>Competitive battlecard</h2>
       <div class="dossier-table">
         <div class="dossier-table-row dossier-table-head">
@@ -400,7 +407,7 @@
     <section class="dossier-section">
       <h2>Evidence ledger</h2>
       <p class="section-description">
-        Customer-facing citations are compact. Download evidence for the full ledger and full excerpts.
+        Download the evidence appendix for full excerpts and source details.
       </p>
       <ol class="source-ledger">
         {% for source in report.executive.sources[:8] %}
@@ -425,6 +432,20 @@
         <li>A competitor should show specific evidence, customer outcomes, and clearer proof than the public pages provide.</li>
       </ul>
     </section>
+
+    <div class="report-action-strip report-actions no-print" aria-label="Report actions">
+      <form method="post" action="/tools/competitor-brief/pdf">
+        <input type="hidden" name="domain" value="{{ report.domain }}">
+        <input type="hidden" name="job_id" value="{{ report.job_id }}">
+        <button type="submit">Download brief PDF</button>
+      </form>
+      <form method="post" action="/tools/competitor-brief/evidence">
+        <input type="hidden" name="domain" value="{{ report.domain }}">
+        <input type="hidden" name="job_id" value="{{ report.job_id }}">
+        <button type="submit" class="secondary-button">Download evidence appendix</button>
+      </form>
+      <button type="button" class="secondary-button" onclick="window.print()">Print report</button>
+    </div>
 
     {% if report.job_id %}
       <section class="feedback-card no-print">
@@ -533,6 +554,7 @@
 <script>
   const scanForm = document.getElementById("scan-form");
   const submitButton = document.getElementById("submit-button");
+  const domainInput = document.getElementById("domain");
   const loadingMessage = document.getElementById("loading-message");
   const scanProgress = document.getElementById("scan-progress");
   const profileReport = document.getElementById("profile-report");
@@ -564,6 +586,11 @@
   scanForm.addEventListener("submit", async (event) => {
     if (!window.fetch) return;
     event.preventDefault();
+    if (!scanForm.reportValidity()) {
+      domainInput.setAttribute("aria-invalid", "true");
+      return;
+    }
+    domainInput.removeAttribute("aria-invalid");
     scanForm.setAttribute("aria-busy", "true");
     submitButton.disabled = true;
     submitButton.textContent = "Scanning...";
@@ -571,7 +598,7 @@
     loadingMessage.classList.remove("error");
     loadingMessage.removeAttribute("role");
     loadingMessage.textContent =
-      "Starting a fresh research run. The previous report is hidden while this scan completes.";
+      "Starting a fresh research run. We will show the new brief when it is ready; saved reports remain in your library.";
     scanProgress.hidden = false;
     if (profileReport) {
       profileReport.hidden = true;
@@ -625,8 +652,16 @@
     }
   });
 
+  domainInput.addEventListener("input", () => {
+    domainInput.removeAttribute("aria-invalid");
+  });
+
+  domainInput.addEventListener("invalid", () => {
+    domainInput.setAttribute("aria-invalid", "true");
+  });
+
   if (profileReport) {
-    profileReport.focus();
+    profileReport.focus({ preventScroll: true });
   }
 </script>
 {% endblock %}

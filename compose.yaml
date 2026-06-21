@@ -8,13 +8,13 @@ services:
       - path: .env
         required: false
     environment:
-      APP_BASE_URL: http://127.0.0.1:8000
+      APP_BASE_URL: http://127.0.0.1:49160
       DATABASE_URL: postgresql://competitor:competitor_dev_password@postgres:5432/competitor_brief
       JOB_REPOSITORY: postgres
       USER_REPOSITORY: postgres
       RENDERED_BROWSER_CHANNEL: ""
     ports:
-      - "127.0.0.1:8000:8000"
+      - "127.0.0.1:49160:8000"
     volumes:
       - competitor_brief_app_data:/app/var
     depends_on:
@@ -26,7 +26,7 @@ services:
           "CMD",
           "python",
           "-c",
-          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health')",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:49160/health')",
         ]
       interval: 10s
       timeout: 5s

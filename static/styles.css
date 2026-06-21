@@ -3111,3 +3111,171 @@ button:hover,
     width: 100%;
   }
 }
+
+.auth-trust-list {
+  color: var(--dossier-muted);
+  line-height: 1.55;
+  margin: 18px 0;
+  padding-left: 18px;
+}
+
+.auth-support-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.auth-support-links a,
+.auth-support-links span,
+.report-jump-nav a {
+  border: 1px solid var(--dossier-black);
+  color: var(--dossier-black);
+  font-family: "Cascadia Code", Consolas, monospace;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  padding: 12px 14px;
+  text-decoration: none;
+  text-transform: uppercase;
+}
+
+.auth-support-links a:hover,
+.report-jump-nav a:hover {
+  background: var(--dossier-black);
+  color: var(--dossier-ivory);
+}
+
+.report-jump-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 18px;
+}
+
+.report-action-strip {
+  border-top: 1px solid var(--dossier-black);
+  flex-wrap: wrap;
+  margin-top: 22px;
+  padding-top: 18px;
+}
+
+/* Mobile layout regression guards. Keep this after all split/report rules. */
+@media (max-width: 920px) {
+  html,
+  body {
+    max-width: 100%;
+    overflow-x: clip;
+  }
+
+  .container,
+  .app-header,
+  .split-hero,
+  .split-hero > *,
+  .profile-sheet,
+  .executive-header,
+  .form-card,
+  .input-row,
+  .analysis-choice,
+  .analysis-option,
+  .report-actions,
+  .report-action-strip,
+  .report-jump-nav,
+  .dossier-card,
+  .dossier-section,
+  .dossier-table,
+  .dossier-table-row,
+  .source-ledger,
+  .admin-dashboard-grid,
+  .admin-tabs,
+  .auth-shell {
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  .split-hero {
+    align-items: stretch;
+    grid-template-columns: 1fr !important;
+  }
+
+  .split-hero > .hero-copy-block,
+  .split-hero > .form-card,
+  .split-hero > .intelligence-rail {
+    grid-column: 1;
+    grid-row: auto;
+  }
+
+  .split-hero > .form-card {
+    order: 2;
+  }
+
+  .split-hero > .intelligence-rail {
+    order: 3;
+  }
+
+  .input-row,
+  .report-actions,
+  .report-action-strip,
+  .executive-header,
+  .auth-shell {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .input-row input,
+  .input-row button,
+  .report-actions button,
+  .report-actions form,
+  .auth-card,
+  .auth-card input {
+    width: 100%;
+  }
+
+  .dossier-card-blue a {
+    color: #2446bb;
+  }
+
+  .source-ledger,
+  .admin-table-wrap {
+    overflow-x: auto;
+  }
+
+  .profile-report:focus,
+  .profile-sheet:focus {
+    outline: none;
+  }
+}
+
+@media (max-width: 640px) {
+  .container {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+
+  .split-hero {
+    gap: 16px;
+  }
+
+  .hero-copy-block h1 {
+    font-size: clamp(2.55rem, 15vw, 3.6rem);
+  }
+
+  .form-card,
+  .profile-sheet,
+  .dossier-card,
+  .dossier-section {
+    padding: 16px;
+  }
+
+  .form-intro,
+  .auth-support-links,
+  .report-jump-nav {
+    align-items: stretch;
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .form-intro {
+    gap: 6px;
+  }
+}

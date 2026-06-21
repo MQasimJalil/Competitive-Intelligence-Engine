@@ -159,6 +159,7 @@ class Settings:
     admin_name: str = os.getenv("ADMIN_NAME", "Admin")
     admin_email: str = os.getenv("ADMIN_EMAIL", "")
     admin_password: str = os.getenv("ADMIN_PASSWORD", "")
+    support_email: str = os.getenv("SUPPORT_EMAIL", os.getenv("ADMIN_EMAIL", ""))
     report_retention_days: int = _int_env("REPORT_RETENTION_DAYS", 30, maximum=365)
     optional_search_api_key: str = os.getenv("OPTIONAL_SEARCH_API_KEY", "")
     optional_tech_lookup_api_key: str = os.getenv("OPTIONAL_TECH_LOOKUP_API_KEY", "")

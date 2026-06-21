@@ -18,7 +18,12 @@ def login_page(request: Request, next: str = "/tools/competitor-brief"):
     return templates.TemplateResponse(
         request,
         "auth/login.html",
-        {"error": "", "email": "", "next": _safe_next(next)},
+        {
+            "error": "",
+            "email": "",
+            "next": _safe_next(next),
+            "support_email": settings.support_email,
+        },
     )
 
 
@@ -38,6 +43,7 @@ def login_submit(
                 "error": "Invalid email or password.",
                 "email": email,
                 "next": _safe_next(next),
+                "support_email": settings.support_email,
             },
             status_code=400,
         )

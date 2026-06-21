@@ -5,9 +5,26 @@
     <p class="dossier-kicker">Private beta</p>
     <h1>Sign in</h1>
     <p class="hero-copy">
-      Access is currently limited to invited testers. Your briefs and evidence files stay
-      tied to your account. Need access or forgot your password? Contact the project owner.
+      Generate cited competitive briefs from public web pages, including offer,
+      positioning, pricing clues, and evidence gaps.
     </p>
+    <ul class="auth-trust-list">
+      <li>Public pages only.</li>
+      <li>No logins, private data, or hidden sources.</li>
+      <li>Briefs and evidence files stay tied to your account.</li>
+    </ul>
+    <div class="auth-support-links">
+      {% if support_email %}
+        <a href="mailto:{{ support_email }}?subject=Competitive%20Intelligence%20beta%20access">
+          Request beta access
+        </a>
+        <a href="mailto:{{ support_email }}?subject=Competitive%20Intelligence%20password%20help">
+          Forgot password?
+        </a>
+      {% else %}
+        <span>Access is currently limited to invited testers.</span>
+      {% endif %}
+    </div>
   </div>
 
   <form method="post" class="card auth-card">
