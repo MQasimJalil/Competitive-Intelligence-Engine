@@ -1,5 +1,6 @@
 from dataclasses import replace
 
+from app import runtime_settings as runtime_module
 from app.auth.store import FileUserStore
 from app.jobs.store import FileJobStore
 from app.main import app
@@ -210,6 +211,34 @@ def test_admin_dashboard_has_dashboard_users_and_usage_tabs_without_report_subje
     assert "Reports by user" in usage.text
     assert "Provider cost by user" in usage.text
     assert "hidden-complete.example" not in usage.text
+
+
+def test_admin_can_switch_ai_analysis_engine(tmp_path, monkeypatch):
+    user_store, _job_store = _configure_auth(monkeypatch, tmp_path)
+    runtime_path = tmp_path / "runtime.json"
+    monkeypatch.setattr(
+        runtime_module,
+        "settings",
+        replace(runtime_module.settings, runtime_settings_path=str(runtime_path)),
+    )
+    user_store.create_user(
+        name="Admin User",
+        email="admin@example.com",
+        password="admin-password",
+        role="admin",
+    )
+    client = TestClient(app)
+    _login(client, "admin@example.com", "admin-password")
+
+    response = client.post(
+        "/tools/competitor-brief/admin/ai-engine",
+        data={"ai_analysis_engine": "dspy"},
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 303
+    assert response.headers["location"] == "/tools/competitor-brief/admin?tab=dashboard"
+    assert runtime_module.load_runtime_settings().ai_analysis_engine == "dspy"
 
 
 def test_admin_can_create_named_tester_account(tmp_path, monkeypatch):

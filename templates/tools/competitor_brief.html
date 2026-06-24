@@ -13,6 +13,7 @@
 {% endif %}
 
 <form method="post" class="card form-card {% if report %}compact-form{% endif %}" id="scan-form">
+  <input type="hidden" name="csrf_token" value="{{ request.state.csrf_token }}">
   <div class="form-intro">
     <label for="domain">{% if report %}Scan another competitor{% else %}Competitor domain or URL{% endif %}</label>
     <span>Public pages only</span>
@@ -120,11 +121,13 @@
         <form method="post" action="/tools/competitor-brief/pdf">
           <input type="hidden" name="domain" value="{{ report.domain }}">
           <input type="hidden" name="job_id" value="{{ report.job_id }}">
+          <input type="hidden" name="csrf_token" value="{{ request.state.csrf_token }}">
           <button type="submit">Download brief PDF</button>
         </form>
         <form method="post" action="/tools/competitor-brief/evidence">
           <input type="hidden" name="domain" value="{{ report.domain }}">
           <input type="hidden" name="job_id" value="{{ report.job_id }}">
+          <input type="hidden" name="csrf_token" value="{{ request.state.csrf_token }}">
           <button type="submit" class="secondary-button">Download evidence appendix</button>
         </form>
         <button type="button" class="secondary-button" onclick="window.print()">Print report</button>
@@ -437,11 +440,13 @@
       <form method="post" action="/tools/competitor-brief/pdf">
         <input type="hidden" name="domain" value="{{ report.domain }}">
         <input type="hidden" name="job_id" value="{{ report.job_id }}">
+        <input type="hidden" name="csrf_token" value="{{ request.state.csrf_token }}">
         <button type="submit">Download brief PDF</button>
       </form>
       <form method="post" action="/tools/competitor-brief/evidence">
         <input type="hidden" name="domain" value="{{ report.domain }}">
         <input type="hidden" name="job_id" value="{{ report.job_id }}">
+        <input type="hidden" name="csrf_token" value="{{ request.state.csrf_token }}">
         <button type="submit" class="secondary-button">Download evidence appendix</button>
       </form>
       <button type="button" class="secondary-button" onclick="window.print()">Print report</button>
@@ -451,6 +456,7 @@
       <section class="feedback-card no-print">
         <h2>Help improve this report</h2>
         <form method="post" action="/tools/competitor-brief/jobs/{{ report.job_id }}/feedback">
+          <input type="hidden" name="csrf_token" value="{{ request.state.csrf_token }}">
           <label for="usefulness-rating">Usefulness</label>
           <select id="usefulness-rating" name="usefulness_rating" required>
             <option value="5">5 - Very useful</option>
@@ -613,14 +619,21 @@
         throw new Error(failure.detail || "Could not create research job.");
       }
       const job = await response.json();
+      const startedAt = Date.now();
       const poll = async () => {
         try {
           const statusResponse = await fetch(`/tools/competitor-brief/jobs/${job.job_id}`);
           if (!statusResponse.ok) throw new Error("Could not read research job status.");
           const current = await statusResponse.json();
+          const elapsedSeconds = Number.isFinite(current.elapsed_seconds)
+            ? current.elapsed_seconds
+            : Math.max(0, Math.round((Date.now() - startedAt) / 1000));
+          const progressMessage = current.progress_message || "Research running.";
+          const progressDetail = current.progress_detail && current.progress_detail !== progressMessage
+            ? ` ${current.progress_detail}`
+            : "";
           loadingMessage.textContent =
-            `Research status: ${current.status.replace("_", " ")}. ` +
-            `${current.fact_count} validated facts so far.`;
+            `${progressMessage}${progressDetail} Elapsed: ${elapsedSeconds}s.`;
           const stages = ["scraping", "classifying", "extracting", "validating"];
           const currentStage = current.workflow ? current.workflow.state : current.status;
           const currentIndex = stages.indexOf(currentStage);

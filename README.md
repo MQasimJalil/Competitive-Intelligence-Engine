@@ -25,7 +25,8 @@ docker compose up --build -d
 Open `http://127.0.0.1:8000/tools/competitor-brief`.
 
 The Compose file binds the backend to `127.0.0.1:8000` so nginx/Caddy can be the
-only public HTTPS entrypoint. For a public VPS behind HTTPS, set these in your
+only public HTTPS entrypoint. Postgres is also bound to `127.0.0.1:54329`, not a
+public interface. For a public VPS behind HTTPS, set these in your
  `.env` file:
 
 ```dotenv
@@ -33,10 +34,21 @@ APP_ENV="production"
 APP_BASE_URL="https://your-domain.example"
 SESSION_COOKIE_SECURE="true"
 AUTH_SECRET="replace-with-a-long-random-string"
+POSTGRES_PASSWORD="replace-with-a-new-long-random-password"
+DATABASE_URL="postgresql://competitor:replace-with-a-new-long-random-password@postgres:5432/competitor_brief"
 ```
 
 Do not expose the backend container directly on `0.0.0.0:8000` unless you are
 intentionally running without a reverse proxy.
+
+VPS hardening checklist before inviting testers:
+
+- Rotate the old development Postgres password and restart the stack.
+- Verify the cloud firewall/security group blocks public inbound `54329`.
+- Keep nginx/Caddy as the only public HTTP/S entrypoint.
+- Set `DEPLOY_SHA` or `BUILD_TIMESTAMP` so static assets cache-bust on deploy.
+- Leave `RENDERED_BROWSER_ENABLED=false` until browser work is moved behind a
+  real queue/worker pool.
 
 Useful commands:
 
@@ -57,6 +69,12 @@ docker compose down -v
 The first build installs Chromium for rendered-page fallback and can take several
 minutes. Later starts reuse the built image. After changing dependencies or the
 Dockerfile, rebuild with `docker compose up --build -d`.
+
+Build the lean production image without local tests, benchmarks, or dev tooling:
+
+```powershell
+docker build -f Dockerfile.prod -t competitor-brief:prod .
+```
 
 To enable OpenRouter analysis, put your key in the ignored local `.env` file:
 
@@ -147,7 +165,7 @@ Open `http://127.0.0.1:8000/tools/competitor-brief`.
 
 The crawler uses ordinary HTTP first. When an allowed page returns a sparse
 JavaScript shell, it can use an identified, bounded Chrome rendering fallback.
-Set `RENDERED_BROWSER_ENABLED=false` to disable it or change
+Rendered fallback is disabled by default. Set `RENDERED_BROWSER_ENABLED=true` to enable it or change
 `RENDERED_BROWSER_CHANNEL` when Chrome is not available.
 
 The crawler performs a bounded second hop when first-pass pages expose links that
@@ -161,6 +179,7 @@ the deterministic report still completes without AI analysis.
 
 ```dotenv
 AI_PROVIDER="openrouter"
+AI_ANALYSIS_ENGINE="openai"
 AI_API_KEY=""
 AI_BASE_URL="https://openrouter.ai/api/v1"
 AI_MODEL="openai/gpt-5.4"
@@ -172,6 +191,16 @@ citation IDs. The adapter first requests native structured output. If a compatib
 model returns malformed structured data, it retries once with an explicit JSON
 object contract and applies the same Pydantic and citation validation. AI calls
 also retain cache, token, cost, and version guardrails.
+
+Admins can switch the analysis adapter on `/tools/competitor-brief/admin`:
+
+- `openai`: current OpenRouter/OpenAI-compatible structured-output flow.
+- `dspy`: DSPy signature/module flow over the same closed evidence prompt.
+
+DSPy improves maintainability and future optimization: the task becomes a typed
+program module rather than a hand-shaped prompt, and it can later be compiled
+against golden benchmarks. It does not remove our safety boundary: generated
+statements still pass the same Pydantic schema and citation validation.
 
 Users choose the report type for each scan:
 
@@ -241,7 +270,9 @@ The complete operational workflow for benchmarks, caching, budgets, run logs,
 and usage tracking is documented in `docs/ai-operations-learning-guide.md`.
 ## Workflow And Jobs
 
-The synchronous tool remains available at `/tools/competitor-brief`.
+The expensive synchronous POST path is disabled by default. The page submits work
+through persisted jobs so crawls, artifacts, status, costs, and failures are
+observable and recoverable.
 
 The application has two related control layers:
 
@@ -321,6 +352,9 @@ Job records are stored under `JOB_STORE_DIR` and include workflow transitions, n
 validation results, extraction-result counts, and validated-fact counts. Completed jobs also
 persist the typed snapshot, full dossier PDF, and evidence appendix. Opening a saved report
 or downloading its PDFs reuses those artifacts instead of crawling the competitor again.
+With Postgres enabled, job admission is handled transactionally: user/global
+concurrency and per-user start limits are checked in the database. Stale pending
+or running jobs are failed after `JOB_STALE_AFTER_SECONDS`.
 
 The full architectural rationale and extension points are documented in
 [`docs/workflow-architecture.md`](docs/workflow-architecture.md).

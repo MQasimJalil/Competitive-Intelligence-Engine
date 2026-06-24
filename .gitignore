@@ -34,11 +34,6 @@ benchmark-results/
 qa-reports/
 sologk-report-prototype/
 *.pdf
-*dossier*.pdf
-*evidence*.pdf
-*competitor-brief*.pdf
-SoloGK*.pdf
-screenshot*.pdf
 *snapshot*.json
 *evidence*.json
 *report*.json

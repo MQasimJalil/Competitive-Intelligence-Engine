@@ -7,6 +7,10 @@ from app.config import settings
 from app.schemas import CompetitorJob, JobStatus, ReportFeedback, ValidationReport, WorkflowRun
 
 
+class JobAdmissionError(Exception):
+    pass
+
+
 class JobRepository(Protocol):
     def create(
         self, domain: str, *, owner_id: str = "", ai_requested: bool = False
@@ -17,6 +21,7 @@ class JobRepository(Protocol):
     def save(self, job: CompetitorJob) -> None: ...
     def delete(self, job_id: str, owner_id: str) -> bool: ...
     def cleanup_expired(self, now: datetime | None = None) -> int: ...
+    def recover_stale(self, stale_after_seconds: int, now: datetime | None = None) -> int: ...
     def save_feedback(self, feedback: ReportFeedback) -> None: ...
     def get_feedback(self, job_id: str, owner_id: str) -> ReportFeedback | None: ...
     def mark_failed(self, job_id: str, error: str) -> CompetitorJob | None: ...
@@ -176,6 +181,20 @@ class FileJobStore:
                 removed += 1
         return removed
 
+    def recover_stale(self, stale_after_seconds: int, now: datetime | None = None) -> int:
+        current = now or datetime.now(UTC)
+        stale_before = current - timedelta(seconds=stale_after_seconds)
+        recovered = 0
+        for job in self._all_jobs():
+            is_active = job.status in {JobStatus.PENDING, JobStatus.RUNNING}
+            if is_active and job.updated_at < stale_before:
+                job.status = JobStatus.FAILED
+                job.error = "Job timed out before completion. Please retry the brief."
+                job.updated_at = current
+                self.save(job)
+                recovered += 1
+        return recovered
+
     def save(self, job: CompetitorJob) -> None:
         self.root.mkdir(parents=True, exist_ok=True)
         path = self._path(job.job_id)
@@ -269,6 +288,13 @@ class PostgresJobStore:
                     PRIMARY KEY (job_id, owner_id),
                     FOREIGN KEY (job_id) REFERENCES competitor_jobs(job_id) ON DELETE CASCADE
                 );
+                CREATE TABLE IF NOT EXISTS rate_limit_events (
+                    bucket TEXT NOT NULL,
+                    key TEXT NOT NULL,
+                    created_at TIMESTAMPTZ NOT NULL
+                );
+                CREATE INDEX IF NOT EXISTS rate_limit_events_lookup_idx
+                    ON rate_limit_events (bucket, key, created_at);
                 """
             )
 
@@ -282,6 +308,91 @@ class PostgresJobStore:
             expires_at=datetime.now(UTC) + timedelta(days=self.retention_days),
         )
         self.save(job)
+        return job
+
+    def create_admitted(
+        self,
+        domain: str,
+        *,
+        owner_id: str,
+        ai_requested: bool,
+        user_concurrency_limit: int,
+        global_concurrency_limit: int,
+        rate_window_seconds: int,
+        rate_max_per_window: int,
+    ) -> CompetitorJob:
+        job = CompetitorJob(
+            domain=domain,
+            owner_id=owner_id or settings.local_owner_id,
+            ai_requested=ai_requested,
+            expires_at=datetime.now(UTC) + timedelta(days=self.retention_days),
+        )
+        with self._connect() as connection, connection.cursor() as cursor:
+            cursor.execute("SELECT pg_advisory_xact_lock(hashtext('competitor_job_admission'))")
+            active_statuses = (JobStatus.PENDING.value, JobStatus.RUNNING.value)
+            cursor.execute(
+                """
+                SELECT COUNT(*) FROM competitor_jobs
+                WHERE owner_id = %s AND status = ANY(%s)
+                """,
+                (job.owner_id, list(active_statuses)),
+            )
+            owner_active = int(cursor.fetchone()[0])
+            if owner_active >= user_concurrency_limit:
+                raise JobAdmissionError(
+                    "This user already has a report running. Wait for it to finish first."
+                )
+            cursor.execute(
+                "SELECT COUNT(*) FROM competitor_jobs WHERE status = ANY(%s)",
+                (list(active_statuses),),
+            )
+            global_active = int(cursor.fetchone()[0])
+            if global_active >= global_concurrency_limit:
+                raise JobAdmissionError(
+                    "The research queue is full. Wait for an active report to finish first."
+                )
+            if rate_max_per_window > 0:
+                cutoff = datetime.now(UTC) - timedelta(seconds=rate_window_seconds)
+                cursor.execute(
+                    "DELETE FROM rate_limit_events WHERE bucket = %s AND created_at < %s",
+                    ("job_start", cutoff),
+                )
+                cursor.execute(
+                    """
+                    SELECT COUNT(*) FROM rate_limit_events
+                    WHERE bucket = %s AND key = %s AND created_at >= %s
+                    """,
+                    ("job_start", job.owner_id, cutoff),
+                )
+                recent = int(cursor.fetchone()[0])
+                if recent >= rate_max_per_window:
+                    raise JobAdmissionError(
+                        "Too many reports started recently. Wait a minute and try again."
+                    )
+                cursor.execute(
+                    """
+                    INSERT INTO rate_limit_events (bucket, key, created_at)
+                    VALUES (%s, %s, %s)
+                    """,
+                    ("job_start", job.owner_id, datetime.now(UTC)),
+                )
+            cursor.execute(
+                """
+                INSERT INTO competitor_jobs
+                    (job_id, owner_id, domain, status, created_at, updated_at, expires_at, payload)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s::jsonb)
+                """,
+                (
+                    job.job_id,
+                    job.owner_id,
+                    job.domain,
+                    job.status.value,
+                    job.created_at,
+                    job.updated_at,
+                    job.expires_at,
+                    job.model_dump_json(),
+                ),
+            )
         return job
 
     def get(self, job_id: str) -> CompetitorJob | None:
@@ -447,6 +558,22 @@ class PostgresJobStore:
                 (now or datetime.now(UTC),),
             )
             return cursor.rowcount
+
+    def recover_stale(self, stale_after_seconds: int, now: datetime | None = None) -> int:
+        current = now or datetime.now(UTC)
+        stale_before = current - timedelta(seconds=stale_after_seconds)
+        stale_jobs = [
+            job
+            for job in self.list_all()
+            if job.status in {JobStatus.PENDING, JobStatus.RUNNING}
+            and job.updated_at < stale_before
+        ]
+        for job in stale_jobs:
+            job.status = JobStatus.FAILED
+            job.error = "Job timed out before completion. Please retry the brief."
+            job.updated_at = current
+            self.save(job)
+        return len(stale_jobs)
 
     def _artifact(self, job_id: str, column: str) -> bytes | None:
         row = self._fetchone(f"SELECT {column} FROM competitor_jobs WHERE job_id = %s", (job_id,))

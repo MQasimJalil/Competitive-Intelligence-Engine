@@ -28,6 +28,28 @@
 </section>
 
 <section class="admin-dashboard-grid">
+  <article class="admin-panel admin-panel-wide">
+    <p class="dossier-kicker">AI engine</p>
+    <h2>Strategic analysis adapter</h2>
+    <p class="muted-line">
+      OpenAI uses the current structured-output flow. DSPy uses a typed signature/module layer
+      around the same evidence set and keeps the same citation validation after generation.
+    </p>
+    <form method="post" action="/tools/competitor-brief/admin/ai-engine" class="admin-inline-form">
+      <input type="hidden" name="csrf_token" value="{{ request.state.csrf_token }}">
+      <label for="ai-analysis-engine">Engine</label>
+      <select id="ai-analysis-engine" name="ai_analysis_engine">
+        <option value="openai" {{ "selected" if runtime_settings.ai_analysis_engine == "openai" else "" }}>
+          OpenAI structured output
+        </option>
+        <option value="dspy" {{ "selected" if runtime_settings.ai_analysis_engine == "dspy" else "" }}>
+          DSPy signature module
+        </option>
+      </select>
+      <button type="submit">Save engine</button>
+    </form>
+  </article>
+
   <article class="admin-panel">
     <p class="dossier-kicker">Status mix</p>
     <h2>Report health</h2>
@@ -98,6 +120,7 @@
     {% endif %}
   </div>
   <form method="post" action="/tools/competitor-brief/admin/users" class="admin-user-form">
+    <input type="hidden" name="csrf_token" value="{{ request.state.csrf_token }}">
     <label for="name">Name</label>
     <input id="name" name="name" type="text" autocomplete="name" required>
 

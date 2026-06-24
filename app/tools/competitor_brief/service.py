@@ -125,6 +125,17 @@ def _advance(
         progress_callback(workflow.model_copy(deep=True))
 
 
+def _publish_progress_detail(
+    workflow: WorkflowRun,
+    detail: str,
+    progress_callback: ProgressCallback | None,
+) -> None:
+    if workflow.transitions:
+        workflow.transitions[-1].detail = detail
+    if progress_callback:
+        progress_callback(workflow.model_copy(deep=True))
+
+
 def _failed_snapshot(
     domain: str,
     homepage: str,
@@ -261,6 +272,11 @@ async def _apify_enrichment(
         homepage,
         social_links,
         enable_ai=enable_ai,
+        include_deep_social=settings.apify_deep_social_enabled,
+        include_linkedin=settings.apify_linkedin_enabled,
+        include_reddit=settings.apify_reddit_enabled,
+        include_search=settings.apify_search_enabled,
+        include_website_content=settings.apify_website_content_enabled,
         apify_budget_usd=settings.apify_max_cost_usd,
         reddit_actor_id=settings.apify_reddit_actor_id,
     )
@@ -272,7 +288,7 @@ async def _apify_enrichment(
     )
     comment_spec = (
         build_instagram_comment_actor_spec(instagram_post_urls_from_datasets(datasets))
-        if enable_ai
+        if enable_ai and settings.apify_deep_social_enabled
         else None
     )
     remaining_apify_budget = settings.apify_max_cost_usd - estimate_apify_actor_cost_usd(specs)
@@ -451,7 +467,7 @@ async def build_preview_snapshot(
     _advance(
         workflow,
         WorkflowState.CLASSIFYING,
-        "Classifying discovered public pages.",
+        "Homepage collected. Classifying discovered public pages.",
         progress_callback,
     )
     homepage_analysis = await _homepage_analysis(workflow, domain, fetched)
@@ -551,6 +567,13 @@ async def build_preview_snapshot(
     )
     first_batch = await extract_ranked_pages_with_candidates(crawl_plan)
     results.extend(first_batch.results)
+    product_fact_count = _product_fact_count(results)
+    if product_fact_count:
+        _publish_progress_detail(
+            workflow,
+            f"{product_fact_count} product facts found. Extracting selected pages.",
+            progress_callback,
+        )
     answered_categories = {
         BusinessCategory(result.extractor_name.removesuffix("_facts"))
         for result in first_batch.results
@@ -579,6 +602,17 @@ async def build_preview_snapshot(
     if tech_result:
         results.append(tech_result)
     apify_estimated_cost_usd = 0.0
+    if settings.apify_enabled and settings.apify_api_token:
+        product_phrase = (
+            f" {product_fact_count} product facts found."
+            if product_fact_count
+            else ""
+        )
+        _publish_progress_detail(
+            workflow,
+            f"Apify enrichment running.{product_phrase}",
+            progress_callback,
+        )
     apify_results = await execute_node(
         workflow,
         WorkflowNode(
@@ -650,6 +684,11 @@ async def build_preview_snapshot(
                 )
             )
         else:
+            _publish_progress_detail(
+                workflow,
+                f"AI analysis running. {validation.checked_fact_count} validated facts ready.",
+                progress_callback,
+            )
             analysis_outcome = await execute_node(
                 workflow,
                 WorkflowNode(
@@ -722,3 +761,23 @@ def _should_probe_shopify_catalog(html: str) -> bool:
             "/products/",
         )
     )
+
+
+def _product_fact_count(results: list[ExtractionResult]) -> int:
+    count = 0
+    product_fact_types = {"linked_product", "product_collection", "visible_price"}
+    for result in results:
+        if result.status != ExtractionStatus.OK or not isinstance(result.value, dict):
+            continue
+        claims = result.value.get("claims")
+        if not isinstance(claims, list):
+            continue
+        for claim in claims:
+            if not isinstance(claim, dict):
+                continue
+            if (
+                claim.get("category") == BusinessCategory.PRODUCTS_MODULES.value
+                or claim.get("fact_type") in product_fact_types
+            ):
+                count += 1
+    return count

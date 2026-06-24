@@ -35,6 +35,11 @@ def build_apify_actor_specs(
     social_links: list[str],
     *,
     enable_ai: bool = False,
+    include_deep_social: bool = False,
+    include_linkedin: bool = True,
+    include_reddit: bool = False,
+    include_search: bool = False,
+    include_website_content: bool = False,
     apify_budget_usd: float = 0.075,
     actor_costs_usd: dict[str, float] | None = None,
     reddit_actor_id: str = "apify/reddit-scraper",
@@ -61,7 +66,7 @@ def build_apify_actor_specs(
         )
     if not enable_ai:
         return specs
-    if instagram_urls:
+    if include_deep_social and instagram_urls:
         _add_actor(
             specs,
             budget,
@@ -77,7 +82,7 @@ def build_apify_actor_specs(
                 },
             ),
         )
-    if linkedin_urls:
+    if include_linkedin and linkedin_urls:
         _add_actor(
             specs,
             budget,
@@ -89,52 +94,55 @@ def build_apify_actor_specs(
                 },
             ),
         )
-    _add_actor(
-        specs,
-        budget,
-        "reddit_search",
-        ApifyActorSpec(
-            actor_id=reddit_actor_id,
-            payload={
-                "searches": [domain],
-                "queries": [f"{domain} reddit", f"site:reddit.com {domain}"],
-                "searchTerms": [domain],
-                "maxItems": 8,
-                "maxResults": 8,
-                "includeComments": True,
-            },
-        ),
-    )
-    _add_actor(
-        specs,
-        budget,
-        "google_search",
-        ApifyActorSpec(
-            actor_id="apify/google-search-scraper",
-            payload={
-                "queries": [
-                    f"{domain} reviews",
-                    f"{domain} instagram linkedin",
-                    f"{domain} competitors",
-                ],
-                "resultsPerPage": 10,
-                "maxPagesPerQuery": 1,
-            },
-        ),
-    )
-    _add_actor(
-        specs,
-        budget,
-        "website_content",
-        ApifyActorSpec(
-            actor_id="apify/website-content-crawler",
-            payload={
-                "startUrls": [{"url": homepage_url}],
-                "maxCrawlPages": 10,
-                "crawlerType": "playwright:firefox",
-            },
-        ),
-    )
+    if include_reddit:
+        _add_actor(
+            specs,
+            budget,
+            "reddit_search",
+            ApifyActorSpec(
+                actor_id=reddit_actor_id,
+                payload={
+                    "searches": [domain],
+                    "queries": [f"{domain} reddit", f"site:reddit.com {domain}"],
+                    "searchTerms": [domain],
+                    "maxItems": 8,
+                    "maxResults": 8,
+                    "includeComments": True,
+                },
+            ),
+        )
+    if include_search:
+        _add_actor(
+            specs,
+            budget,
+            "google_search",
+            ApifyActorSpec(
+                actor_id="apify/google-search-scraper",
+                payload={
+                    "queries": [
+                        f"{domain} reviews",
+                        f"{domain} instagram linkedin",
+                        f"{domain} competitors",
+                    ],
+                    "resultsPerPage": 10,
+                    "maxPagesPerQuery": 1,
+                },
+            ),
+        )
+    if include_website_content:
+        _add_actor(
+            specs,
+            budget,
+            "website_content",
+            ApifyActorSpec(
+                actor_id="apify/website-content-crawler",
+                payload={
+                    "startUrls": [{"url": homepage_url}],
+                    "maxCrawlPages": 10,
+                    "crawlerType": "playwright:firefox",
+                },
+            ),
+        )
     return specs
 
 

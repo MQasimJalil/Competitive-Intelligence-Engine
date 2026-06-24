@@ -29,7 +29,7 @@
 
   <form method="post" class="card auth-card">
     {% if error %}
-      <div class="notice error" role="alert">{{ error }}</div>
+      <div class="notice error" role="alert" id="login-error">{{ error }}</div>
     {% endif %}
     <input type="hidden" name="next" value="{{ next }}">
     <label for="email">Email</label>
@@ -47,4 +47,12 @@
     <button type="submit">Sign in</button>
   </form>
 </section>
+<script>
+  const loginError = document.getElementById("login-error");
+  document.querySelectorAll(".auth-card input").forEach((input) => {
+    input.addEventListener("input", () => {
+      if (loginError) loginError.hidden = true;
+    });
+  });
+</script>
 {% endblock %}

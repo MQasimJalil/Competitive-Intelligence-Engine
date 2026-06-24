@@ -9,10 +9,16 @@ services:
         required: false
     environment:
       APP_BASE_URL: http://127.0.0.1:49160
-      DATABASE_URL: postgresql://competitor:competitor_dev_password@postgres:5432/competitor_brief
+      DATABASE_URL: postgresql://competitor:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}@postgres:5432/competitor_brief
       JOB_REPOSITORY: postgres
       USER_REPOSITORY: postgres
+      RENDERED_BROWSER_ENABLED: "false"
       RENDERED_BROWSER_CHANNEL: ""
+      APIFY_TIMEOUT_SECONDS: "35"
+      APIFY_DEEP_SOCIAL_ENABLED: "false"
+      APIFY_REDDIT_ENABLED: "false"
+      APIFY_SEARCH_ENABLED: "false"
+      APIFY_WEBSITE_CONTENT_ENABLED: "false"
     ports:
       - "127.0.0.1:49160:8000"
     volumes:
@@ -26,7 +32,7 @@ services:
           "CMD",
           "python",
           "-c",
-          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:49160/health')",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health')",
         ]
       interval: 10s
       timeout: 5s
@@ -40,9 +46,9 @@ services:
     environment:
       POSTGRES_DB: competitor_brief
       POSTGRES_USER: competitor
-      POSTGRES_PASSWORD: competitor_dev_password
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
     ports:
-      - "54329:5432"
+      - "127.0.0.1:54329:5432"
     volumes:
       - competitor_brief_postgres_data:/var/lib/postgresql/data
     healthcheck:

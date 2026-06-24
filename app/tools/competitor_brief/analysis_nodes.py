@@ -2,8 +2,10 @@ import asyncio
 from collections.abc import Callable
 from dataclasses import dataclass
 
+from app.adapters.dspy_analysis import generate_dspy_analysis
 from app.adapters.openai_analysis import generate_ai_analysis
 from app.config import Settings
+from app.runtime_settings import ai_analysis_engine
 from app.schemas import AIAnalysisRun, NormalizedBusinessProfile
 
 
@@ -20,9 +22,11 @@ class StrategicAnalysisNode:
 def build_strategic_analysis_node(settings: Settings) -> StrategicAnalysisNode | None:
     if not settings.ai_analysis_enabled or not settings.openai_api_key:
         return None
+    engine = ai_analysis_engine()
 
     def run(profile: NormalizedBusinessProfile) -> AIAnalysisRun:
-        return generate_ai_analysis(
+        generator = generate_dspy_analysis if engine == "dspy" else generate_ai_analysis
+        return generator(
             profile,
             api_key=settings.openai_api_key,
             model=settings.openai_model,
@@ -43,7 +47,7 @@ def build_strategic_analysis_node(settings: Settings) -> StrategicAnalysisNode |
         )
 
     return StrategicAnalysisNode(
-        name="strategic_ai_analysis",
+        name=f"strategic_{engine}_analysis",
         version=settings.ai_prompt_version,
         runner=run,
     )

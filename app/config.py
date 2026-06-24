@@ -76,6 +76,10 @@ def _session_cookie_secure() -> bool:
     )
 
 
+def _static_asset_version() -> str:
+    return _first_defined_env("DEPLOY_SHA", "BUILD_TIMESTAMP", "STATIC_ASSET_VERSION") or "dev"
+
+
 @dataclass(frozen=True)
 class Settings:
     app_name: str = os.getenv("APP_NAME", "Competitor Brief")
@@ -100,10 +104,11 @@ class Settings:
         300,
         maximum=60 * 60,
     )
-    rendered_browser_enabled: bool = _bool_env("RENDERED_BROWSER_ENABLED", True)
+    rendered_browser_enabled: bool = _bool_env("RENDERED_BROWSER_ENABLED", False)
     rendered_browser_channel: str = os.getenv("RENDERED_BROWSER_CHANNEL", "chrome")
     rendered_browser_timeout_seconds: float = _float_env("RENDERED_BROWSER_TIMEOUT_SECONDS", 20.0)
     ai_provider: str = os.getenv("AI_PROVIDER", "openrouter")
+    ai_analysis_engine: str = os.getenv("AI_ANALYSIS_ENGINE", "openai")
     ai_api_key: str = _ai_api_key()
     ai_base_url: str = os.getenv("AI_BASE_URL", "https://openrouter.ai/api/v1")
     ai_model: str = os.getenv("AI_MODEL") or os.getenv("OPENAI_MODEL", "openai/gpt-5.4")
@@ -115,6 +120,10 @@ class Settings:
     ai_cache_enabled: bool = _bool_env("AI_CACHE_ENABLED", True)
     ai_cache_dir: str = os.getenv("AI_CACHE_DIR", "var/ai_cache")
     ai_run_log_path: str = os.getenv("AI_RUN_LOG_PATH", "var/logs/ai_runs.jsonl")
+    runtime_settings_path: str = os.getenv(
+        "RUNTIME_SETTINGS_PATH",
+        "var/runtime_settings.json",
+    )
     ai_max_input_tokens: int = _int_env("AI_MAX_INPUT_TOKENS", 12_000, maximum=100_000)
     ai_max_output_tokens: int = _int_env("AI_MAX_OUTPUT_TOKENS", 2_000, maximum=20_000)
     report_max_cost_usd: float = field(default_factory=_report_max_cost_usd)
@@ -131,6 +140,11 @@ class Settings:
     auth_secret: str = os.getenv("AUTH_SECRET", "dev-insecure-change-me")
     session_cookie_name: str = os.getenv("SESSION_COOKIE_NAME", "competitor_brief_session")
     session_cookie_secure: bool = field(default_factory=_session_cookie_secure)
+    csrf_cookie_name: str = os.getenv("CSRF_COOKIE_NAME", "competitor_brief_csrf")
+    csrf_protection_enabled: bool = _bool_env(
+        "CSRF_PROTECTION_ENABLED",
+        os.getenv("APP_ENV", "development").casefold() != "testing",
+    )
     session_max_age_seconds: int = _int_env(
         "SESSION_MAX_AGE_SECONDS",
         60 * 60 * 24 * 14,
@@ -146,6 +160,11 @@ class Settings:
         6,
         maximum=100,
     )
+    job_stale_after_seconds: int = _int_env(
+        "JOB_STALE_AFTER_SECONDS",
+        15 * 60,
+        maximum=24 * 60 * 60,
+    )
     job_user_concurrency_limit: int = _int_env(
         "JOB_USER_CONCURRENCY_LIMIT",
         1,
@@ -160,6 +179,19 @@ class Settings:
     admin_email: str = os.getenv("ADMIN_EMAIL", "")
     admin_password: str = os.getenv("ADMIN_PASSWORD", "")
     support_email: str = os.getenv("SUPPORT_EMAIL", os.getenv("ADMIN_EMAIL", ""))
+    auth_audit_log_path: str = os.getenv("AUTH_AUDIT_LOG_PATH", "var/logs/auth_audit.jsonl")
+    login_rate_limit_window_seconds: int = _int_env(
+        "LOGIN_RATE_LIMIT_WINDOW_SECONDS",
+        15 * 60,
+        maximum=24 * 60 * 60,
+    )
+    login_rate_limit_max_attempts: int = _int_env(
+        "LOGIN_RATE_LIMIT_MAX_ATTEMPTS",
+        8,
+        maximum=1_000,
+    )
+    legacy_sync_post_enabled: bool = _bool_env("LEGACY_SYNC_POST_ENABLED", False)
+    static_asset_version: str = field(default_factory=_static_asset_version)
     report_retention_days: int = _int_env("REPORT_RETENTION_DAYS", 30, maximum=365)
     optional_search_api_key: str = os.getenv("OPTIONAL_SEARCH_API_KEY", "")
     optional_tech_lookup_api_key: str = os.getenv("OPTIONAL_TECH_LOOKUP_API_KEY", "")
@@ -168,6 +200,11 @@ class Settings:
     apify_timeout_seconds: float = _float_env("APIFY_TIMEOUT_SECONDS", 120.0)
     apify_max_cost_usd: float = field(default_factory=_apify_max_cost_usd)
     apify_reddit_actor_id: str = os.getenv("APIFY_REDDIT_ACTOR_ID", "apify/reddit-scraper")
+    apify_deep_social_enabled: bool = _bool_env("APIFY_DEEP_SOCIAL_ENABLED", False)
+    apify_linkedin_enabled: bool = _bool_env("APIFY_LINKEDIN_ENABLED", True)
+    apify_reddit_enabled: bool = _bool_env("APIFY_REDDIT_ENABLED", False)
+    apify_search_enabled: bool = _bool_env("APIFY_SEARCH_ENABLED", False)
+    apify_website_content_enabled: bool = _bool_env("APIFY_WEBSITE_CONTENT_ENABLED", False)
 
     @property
     def openai_api_key(self) -> str:

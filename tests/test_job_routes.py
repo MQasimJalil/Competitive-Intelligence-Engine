@@ -1,4 +1,5 @@
 import asyncio
+import re
 from dataclasses import replace
 
 from app.auth.store import FileUserStore
@@ -8,6 +9,9 @@ from app.schemas import (
     ExtractionResult,
     ExtractionStatus,
     JobStatus,
+    NodeFailurePolicy,
+    NodeRun,
+    NodeStatus,
     NormalizedBusinessProfile,
     WorkflowRun,
     WorkflowState,
@@ -16,6 +20,7 @@ from app.tools.competitor_brief import router as router_module
 from app.tools.competitor_brief.service import CompetitorSnapshot
 from app.tools.competitor_brief.validation import validate_business_profile
 from app.web import auth as web_auth
+from app.web import csrf as csrf_module
 from fastapi.testclient import TestClient
 
 
@@ -58,6 +63,8 @@ def test_tool_page_offers_free_and_ai_report_choices(tmp_path, monkeypatch):
     assert 'domainInput.addEventListener("invalid"' in response.text
     assert "We will show the new brief when it is ready" in response.text
     assert "focus({ preventScroll: true })" in response.text
+    assert "current.progress_message" in response.text
+    assert "Elapsed:" in response.text
 
 
 def test_tool_page_polling_resets_ui_when_late_poll_fails(tmp_path, monkeypatch):
@@ -70,6 +77,35 @@ def test_tool_page_polling_resets_ui_when_late_poll_fails(tmp_path, monkeypatch)
     assert "window.setTimeout(() => void poll(), 700)" in response.text
     assert 'if (current.status === "failed") {' in response.text
     assert 'failResearchJob(current.error || "Research job failed.")' in response.text
+
+
+def test_job_status_returns_honest_progress_details(tmp_path, monkeypatch):
+    store = FileJobStore(tmp_path)
+    monkeypatch.setattr(router_module, "job_store", store)
+    client, user = _create_logged_in_client(monkeypatch, tmp_path)
+    job = store.create("example.com", owner_id=user.user_id)
+    workflow = WorkflowRun(domain="example.com")
+    workflow.advance(WorkflowState.SCRAPING, "Started robots and homepage collection.")
+    workflow.advance(WorkflowState.CLASSIFYING, "Homepage collected. Classifying public pages.")
+    workflow.advance(WorkflowState.EXTRACTING, "12 product facts found. Extracting selected pages.")
+    workflow.node_runs.append(
+        NodeRun(
+            name="apify_public_enrichment",
+            version="v1",
+            failure_policy=NodeFailurePolicy.OPTIONAL,
+            status=NodeStatus.RUNNING,
+        )
+    )
+    store.update_workflow(job.job_id, workflow)
+
+    response = client.get(f"/tools/competitor-brief/jobs/{job.job_id}")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["progress_message"] == "Apify enrichment running."
+    assert payload["progress_detail"] == "12 product facts found. Extracting selected pages."
+    assert payload["elapsed_seconds"] >= 0
+    assert payload["stage_facts"]["products_found"] == 12
 
 
 def test_create_job_defaults_to_free_report(tmp_path, monkeypatch):
@@ -90,6 +126,56 @@ def test_create_job_defaults_to_free_report(tmp_path, monkeypatch):
     assert job.owner_id == user.user_id
     assert job.ai_requested is False
     assert requests == [(job.job_id, "example.com", False)]
+
+
+def test_sync_post_is_disabled_by_default(tmp_path, monkeypatch):
+    client, _user = _create_logged_in_client(monkeypatch, tmp_path)
+
+    response = client.post("/tools/competitor-brief", data={"domain": "example.com"})
+
+    assert response.status_code == 410
+    assert "Synchronous report generation is disabled" in response.json()["detail"]
+
+
+def test_job_creation_requires_csrf_when_enabled(tmp_path, monkeypatch):
+    monkeypatch.setattr(
+        csrf_module,
+        "settings",
+        replace(csrf_module.settings, csrf_protection_enabled=True),
+    )
+    client, _user = _create_logged_in_client(monkeypatch, tmp_path)
+
+    response = client.post("/tools/competitor-brief/jobs", data={"domain": "example.com"})
+
+    assert response.status_code == 403
+    assert "Security token" in response.json()["detail"]
+
+
+def test_job_creation_accepts_csrf_token_when_enabled(tmp_path, monkeypatch):
+    monkeypatch.setattr(
+        csrf_module,
+        "settings",
+        replace(csrf_module.settings, csrf_protection_enabled=True),
+    )
+    store = FileJobStore(tmp_path)
+    requests = []
+
+    async def capture(job_id, domain, enable_ai):
+        requests.append((job_id, domain, enable_ai))
+
+    monkeypatch.setattr(router_module, "job_store", store)
+    monkeypatch.setattr(router_module, "_run_persisted_job", capture)
+    client, _user = _create_logged_in_client(monkeypatch, tmp_path)
+    page = client.get("/tools/competitor-brief")
+    csrf_token = re.search(r'name="csrf_token" value="([^"]+)"', page.text).group(1)
+
+    response = client.post(
+        "/tools/competitor-brief/jobs",
+        data={"domain": "example.com", "csrf_token": csrf_token},
+    )
+
+    assert response.status_code == 200
+    assert requests
 
 
 def test_create_job_passes_ai_choice_to_workflow(tmp_path, monkeypatch):
@@ -154,7 +240,14 @@ def test_create_job_enforces_user_concurrency_limit(tmp_path, monkeypatch):
 def test_create_job_enforces_rate_limit(tmp_path, monkeypatch):
     store = FileJobStore(tmp_path)
     monkeypatch.setattr(router_module, "job_store", store)
-    monkeypatch.setattr(router_module.job_start_limiter, "allow", lambda user_id: False)
+
+    def block_start(owner_id):
+        raise router_module.HTTPException(
+            status_code=429,
+            detail="Too many reports started recently. Wait a minute and try again.",
+        )
+
+    monkeypatch.setattr(router_module, "_enforce_job_start_limits", block_start)
     client, _user = _create_logged_in_client(monkeypatch, tmp_path)
 
     response = client.post("/tools/competitor-brief/jobs", data={"domain": "example.com"})

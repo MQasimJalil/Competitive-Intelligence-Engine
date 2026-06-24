@@ -60,6 +60,7 @@
           </a>
         {% endif %}
         <form method="post" action="/tools/competitor-brief/jobs/{{ job.job_id }}/delete">
+          <input type="hidden" name="csrf_token" value="{{ request.state.csrf_token }}">
           <button type="submit" class="secondary-button">Delete</button>
         </form>
       </div>

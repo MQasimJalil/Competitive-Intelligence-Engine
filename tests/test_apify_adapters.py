@@ -209,7 +209,7 @@ def test_build_actor_specs_free_mode_uses_profile_only_and_skips_deep_social():
     assert "https://www.instagram.com/sologkgloves/" in str(specs["instagram"].payload)
 
 
-def test_build_actor_specs_ai_mode_uses_small_social_depth_and_reddit():
+def test_build_actor_specs_ai_mode_is_fast_by_default():
     specs = build_apify_actor_specs(
         "sologk.com",
         "https://sologk.com/",
@@ -222,13 +222,37 @@ def test_build_actor_specs_ai_mode_uses_small_social_depth_and_reddit():
     )
 
     assert "instagram" in specs
-    assert "instagram_posts" in specs
     assert "linkedin" in specs
-    assert "reddit_search" in specs
-    assert specs["instagram_posts"].payload["resultsLimit"] <= 3
+    assert "instagram_posts" not in specs
+    assert "reddit_search" not in specs
+    assert "google_search" not in specs
+    assert "website_content" not in specs
     assert specs["linkedin"].actor_id == "harvestapi/linkedin-company"
-    assert "reddit.com" in str(specs["reddit_search"].payload).casefold()
     assert "https://www.linkedin.com/company/sologk/" in str(specs["linkedin"].payload)
+
+
+def test_build_actor_specs_deep_enrichment_is_opt_in():
+    specs = build_apify_actor_specs(
+        "sologk.com",
+        "https://sologk.com/",
+        [
+            "https://www.instagram.com/sologkgloves/",
+            "https://www.linkedin.com/company/sologk/",
+        ],
+        enable_ai=True,
+        include_deep_social=True,
+        include_reddit=True,
+        include_search=True,
+        include_website_content=True,
+        apify_budget_usd=0.05,
+    )
+
+    assert "instagram_posts" in specs
+    assert specs["instagram_posts"].payload["resultsLimit"] <= 3
+    assert "reddit_search" in specs
+    assert "reddit.com" in str(specs["reddit_search"].payload).casefold()
+    assert "google_search" in specs
+    assert "website_content" in specs
 
 
 def test_build_actor_specs_skips_social_actors_without_discovered_social_links():
@@ -237,8 +261,8 @@ def test_build_actor_specs_skips_social_actors_without_discovered_social_links()
     assert "instagram" not in specs
     assert "instagram_posts" not in specs
     assert "linkedin" not in specs
-    assert "google_search" in specs
-    assert "website_content" in specs
+    assert "google_search" not in specs
+    assert "website_content" not in specs
 
 
 def test_build_actor_specs_respects_apify_budget_before_calling_paid_actors():
@@ -268,6 +292,8 @@ def test_estimated_apify_cost_tracks_selected_actor_specs():
         ],
         enable_ai=True,
         apify_budget_usd=0.008,
+        include_deep_social=True,
+        include_reddit=True,
     )
 
     assert estimate_apify_actor_cost_usd(specs) <= 0.008
