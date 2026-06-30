@@ -9,9 +9,10 @@ services:
         required: false
     environment:
       APP_BASE_URL: http://127.0.0.1:49160
-      DATABASE_URL: postgresql://competitor:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}@postgres:5432/competitor_brief
-      JOB_REPOSITORY: postgres
-      USER_REPOSITORY: postgres
+      DATABASE_URL: ${COMPOSE_DATABASE_URL:-${DATABASE_URL:-postgresql://competitor:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}@postgres:5432/competitor_brief}}
+      JOB_REPOSITORY: ${JOB_REPOSITORY:-postgres}
+      USER_REPOSITORY: ${USER_REPOSITORY:-postgres}
+      CREDIT_REPOSITORY: ${CREDIT_REPOSITORY:-postgres}
       RENDERED_BROWSER_ENABLED: "false"
       RENDERED_BROWSER_CHANNEL: ""
       APIFY_TIMEOUT_SECONDS: "35"
@@ -23,9 +24,6 @@ services:
       - "127.0.0.1:49160:8000"
     volumes:
       - competitor_brief_app_data:/app/var
-    depends_on:
-      postgres:
-        condition: service_healthy
     healthcheck:
       test:
         [
@@ -40,6 +38,8 @@ services:
       start_period: 10s
 
   postgres:
+    profiles:
+      - local-postgres
     image: postgres:17-alpine
     container_name: competitor-brief-postgres
     restart: unless-stopped
@@ -66,6 +66,7 @@ services:
       AI_ANALYSIS_ENABLED: "false"
       JOB_REPOSITORY: file
       USER_REPOSITORY: file
+      CREDIT_REPOSITORY: file
       RENDERED_BROWSER_ENABLED: "false"
     command: python -m pytest -q
 

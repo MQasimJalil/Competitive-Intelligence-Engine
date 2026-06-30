@@ -602,9 +602,25 @@ def build_job_store(
     return FileJobStore(root, retention_days=retention_days)
 
 
-job_store = build_job_store(
-    settings.job_repository,
-    root=settings.job_store_dir,
-    database_url=settings.database_url,
-    retention_days=settings.report_retention_days,
-)
+class LazyJobStore:
+    def __init__(self):
+        self._store = None
+        self._lock = Lock()
+
+    def _get_store(self):
+        if self._store is None:
+            with self._lock:
+                if self._store is None:
+                    self._store = build_job_store(
+                        settings.job_repository,
+                        root=settings.job_store_dir,
+                        database_url=settings.database_url,
+                        retention_days=settings.report_retention_days,
+                    )
+        return self._store
+
+    def __getattr__(self, name: str):
+        return getattr(self._get_store(), name)
+
+
+job_store = LazyJobStore()

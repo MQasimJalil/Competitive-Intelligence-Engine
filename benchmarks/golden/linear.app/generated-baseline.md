@@ -11,7 +11,8 @@ Move work forward across teams and agents
 - **Products spotted:** Not clearly identified
 - **Observed prices:** $0 - $16
 - **Sources cited:** 4
-- **Evidence coverage:** 4 of 5 areas
+- **Business model:** SaaS / platform
+- **Collections spotted:** Not clearly identified
 
 ## What they offer
 
@@ -43,6 +44,6 @@ Move work forward across teams and agents
 
 ## Baseline Inventory
 
-- Normalized facts: 97
+- Normalized facts: 103
 - Product-price offers: 1
 - AI status: disabled

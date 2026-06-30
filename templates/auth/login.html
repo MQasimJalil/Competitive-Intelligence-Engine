@@ -14,6 +14,9 @@
       <li>Briefs and evidence files stay tied to your account.</li>
     </ul>
     <div class="auth-support-links">
+      {% if auth_provider == "supabase" %}
+        <a href="/auth/signup">Create account</a>
+      {% endif %}
       {% if support_email %}
         <a href="mailto:{{ support_email }}?subject=Competitive%20Intelligence%20beta%20access">
           Request beta access
@@ -28,6 +31,7 @@
   </div>
 
   <form method="post" class="card auth-card">
+    <input type="hidden" name="csrf_token" value="{{ request.state.csrf_token }}">
     {% if error %}
       <div class="notice error" role="alert" id="login-error">{{ error }}</div>
     {% endif %}
@@ -43,6 +47,11 @@
       autocomplete="current-password"
       required
     >
+
+    {% if captcha_site_key and auth_provider == "supabase" %}
+      <div class="h-captcha" data-sitekey="{{ captcha_site_key }}"></div>
+      <script src="https://js.hcaptcha.com/1/api.js" async defer></script>
+    {% endif %}
 
     <button type="submit">Sign in</button>
   </form>

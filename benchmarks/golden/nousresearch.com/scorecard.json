@@ -1,6 +1,6 @@
 {
   "domain": "nousresearch.com",
-  "required_fact_recall": 0.8,
+  "required_fact_recall": 0.6,
   "important_fact_recall": 0.5,
   "forbidden_claim_avoidance": 1.0,
   "citation_reference_validity": 1.0,
@@ -17,13 +17,13 @@
     },
     {
       "fact": "Its portfolio spans models, agents, datasets, frameworks, infrastructure, papers, and simulators.",
-      "coverage": 0.4444,
+      "coverage": 0.3333,
       "matched": false
     },
     {
       "fact": "Hermes Agent is an open-source self-hosted autonomous agent with persistent memory and automation capabilities.",
-      "coverage": 1.0,
-      "matched": true
+      "coverage": 0.3636,
+      "matched": false
     },
     {
       "fact": "Nous actively publishes research and releases across several technical AI domains.",

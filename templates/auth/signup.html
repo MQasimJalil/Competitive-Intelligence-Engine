@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="auth-shell">
+  <div>
+    <p class="dossier-kicker">Public beta</p>
+    <h1>Create account</h1>
+    <p class="hero-copy">
+      Verify your email to unlock 2 free AI report credits.
+    </p>
+    <div class="auth-support-links">
+      <a href="/auth/login">Sign in</a>
+    </div>
+  </div>
+
+  <form method="post" class="card auth-card">
+    <input type="hidden" name="csrf_token" value="{{ request.state.csrf_token }}">
+    {% if error %}
+      <div class="notice error" role="alert">{{ error }}</div>
+    {% endif %}
+    {% if success %}
+      <div class="notice success" role="status">{{ success }}</div>
+    {% endif %}
+
+    <label for="email">Email</label>
+    <input id="email" name="email" type="email" autocomplete="email" value="{{ email }}" required>
+
+    <label for="phone_number">Phone number</label>
+    <input id="phone_number" name="phone_number" type="tel" autocomplete="tel" value="{{ phone_number }}" required>
+
+    <label for="password">Password</label>
+    <input id="password" name="password" type="password" autocomplete="new-password" minlength="8" required>
+
+    <label for="confirm_password">Confirm password</label>
+    <input id="confirm_password" name="confirm_password" type="password" autocomplete="new-password" minlength="8" required>
+
+    {% if captcha_site_key %}
+      <div class="h-captcha" data-sitekey="{{ captcha_site_key }}"></div>
+      <script src="https://js.hcaptcha.com/1/api.js" async defer></script>
+    {% endif %}
+
+    <button type="submit">Create account</button>
+  </form>
+</section>
+{% endblock %}

@@ -45,6 +45,7 @@
         <form class="nav-logout" method="post" action="/auth/logout">
           <input type="hidden" name="csrf_token" value="{{ request.state.csrf_token }}">
           <span>{{ current_user.name }}</span>
+          <span>{{ current_user.credit_balance }} credits</span>
           <button type="submit">Logout</button>
         </form>
       {% endif %}

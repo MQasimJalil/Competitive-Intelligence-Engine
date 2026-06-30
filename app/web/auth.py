@@ -29,13 +29,89 @@ def login_page(request: Request, next: str = "/tools/competitor-brief"):
     )
 
 
+@router.get("/signup")
+def signup_page(request: Request):
+    if settings.auth_provider != "supabase":
+        raise HTTPException(status_code=404, detail="Signup is not enabled")
+    return templates.TemplateResponse(
+        request,
+        "auth/signup.html",
+        _template_context(error="", success="", email="", phone_number=""),
+    )
+
+
+@router.post("/signup")
+def signup_submit(
+    request: Request,
+    email: str = Form(...),
+    phone_number: str = Form(...),
+    password: str = Form(...),
+    confirm_password: str = Form(...),
+    csrf_token: str = Form(""),
+    cf_turnstile_response: str = Form("", alias="cf-turnstile-response"),
+    h_captcha_response: str = Form("", alias="h-captcha-response"),
+):
+    captcha_token = h_captcha_response or cf_turnstile_response
+    if settings.auth_provider != "supabase":
+        raise HTTPException(status_code=404, detail="Signup is not enabled")
+    require_csrf(request, csrf_token)
+    error = _signup_error(password, confirm_password, captcha_token)
+    if error:
+        return templates.TemplateResponse(
+            request,
+            "auth/signup.html",
+            _template_context(
+                error=error,
+                success="",
+                email=email,
+                phone_number=phone_number,
+            ),
+            status_code=400,
+        )
+    try:
+        user_store.signup(
+            email=email,
+            phone_number=phone_number,
+            password=password,
+            captcha_token=captcha_token,
+        )
+    except ValueError as exc:
+        return templates.TemplateResponse(
+            request,
+            "auth/signup.html",
+            _template_context(
+                error=str(exc),
+                success="",
+                email=email,
+                phone_number=phone_number,
+            ),
+            status_code=400,
+        )
+    return templates.TemplateResponse(
+        request,
+        "auth/signup.html",
+        _template_context(
+            error="",
+            success=(
+                "Check your email to verify your account. "
+                "Your 2 free credits appear after verification."
+            ),
+            email="",
+            phone_number="",
+        ),
+    )
+
+
 @router.post("/login")
 def login_submit(
     request: Request,
     email: str = Form(...),
     password: str = Form(...),
     next: str = Form("/tools/competitor-brief"),
+    csrf_token: str = Form(""),
+    h_captcha_response: str = Form("", alias="h-captcha-response"),
 ):
+    require_csrf(request, csrf_token)
     key = _login_key(request, email)
     if not login_throttle.allow(key):
         log_auth_event(
@@ -55,8 +131,13 @@ def login_submit(
             ),
             status_code=429,
         )
-    user = user_store.get_by_email(email)
-    if user is None or not verify_password(password, user.password_hash):
+    auth_error = ""
+    try:
+        user = _authenticate(email, password, h_captcha_response)
+    except ValueError as exc:
+        user = None
+        auth_error = str(exc)
+    if user is None:
         log_auth_event(
             "login_failed",
             email=email,
@@ -68,7 +149,7 @@ def login_submit(
             request,
             "auth/login.html",
             _template_context(
-                error="Invalid email or password.",
+                error=auth_error or "Invalid email or password.",
                 email=email,
                 next=_safe_next(next),
             ),
@@ -107,7 +188,24 @@ def current_user(request: Request) -> AppUser | None:
     if not token:
         return None
     user_id = read_session_token(token)
-    return user_store.get(user_id) if user_id else None
+    if not user_id:
+        return None
+    user = user_store.get(user_id)
+    if user is None or not user.is_active:
+        return None
+    return user
+
+
+def _authenticate(email: str, password: str, captcha_token: str = "") -> AppUser | None:
+    authenticate = getattr(user_store, "authenticate", None)
+    if authenticate is not None:
+        return authenticate(email, password, captcha_token=captcha_token)
+    user = user_store.get_by_email(email)
+    if user is None or not user.is_active:
+        return None
+    if not user.password_hash or not verify_password(password, user.password_hash):
+        return None
+    return user
 
 
 def require_user(request: Request) -> AppUser:
@@ -137,9 +235,21 @@ def _safe_next(value: str) -> str:
 def _template_context(**values):
     return {
         "support_email": settings.support_email,
+        "auth_provider": settings.auth_provider,
+        "captcha_site_key": settings.captcha_site_key,
         "static_asset_version": settings.static_asset_version,
         **values,
     }
+
+
+def _signup_error(password: str, confirm_password: str, captcha_token: str) -> str:
+    if password != confirm_password:
+        return "Passwords do not match."
+    if len(password) < 8:
+        return "Password must be at least 8 characters."
+    if settings.captcha_site_key and not captcha_token:
+        return "Captcha is required."
+    return ""
 
 
 def _client_ip(request: Request) -> str:

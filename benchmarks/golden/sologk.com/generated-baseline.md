@@ -4,60 +4,50 @@ AI disabled for benchmark baseline.
 
 ## At A Glance
 
-SOLO was created with the keeper in mind. As a UK-based brand, it keeps price and
-quality central to its mission and presents professional-grade goalkeeper gloves
-as accessible equipment.
-
-## Snapshot Expectations
-
-- **Country:** United Kingdom
-- **Industry:** Goalkeeper gloves
-- **Business model:** DTC ecommerce
-- **Observed price band:** GBP 25-40 from visible public prices
-- **Shop listing count:** about 20 public product listings
-- **Threat read:** Medium, because the store has a focused offer and visible
-  pricing, but public proof and recent activity remain evidence gaps.
+SOLO was created with the keeper in mind. As a UK-based brand, we ensure that both price and quality are at the forefront of our mission.
 
 ## Quick Facts
 
-- **Products spotted:** should list actual product names, not collection names.
-- **Observed prices:** GBP 25-40
-- **Sources cited:** first-party website, product pages, and public catalog feed
-- **Evidence coverage:** positioning and offer are strongest; proof and recent
-  activity remain weaker.
+- **Products spotted:** LUNAR QUARTZ - ERYTHRO, LUNAR QUARTZ - BLUE, LUNAR QUARTZ - RED
+- **Observed prices:** GBP 35 - GBP 40
+- **Sources cited:** 6
+- **Business model:** DTC ecommerce
+- **Collections spotted:** Eclipse, Vortex, Lunar, Cobra
 
-## What They Offer
+## What they offer
 
-- Product portfolio: Eclipse, Vortex, Lunar, Cobra, and Viper are collection or
-  category signals, not individual products.
-- Actual product examples include Lunar 2 and product records discovered from
-  public `/products/` listings.
-- Benchmark correction: collection/category names should not be counted as
-  actual products. The report should use public product listings to surface a
-  shop listing count around 20 items.
+- Collections observed: Eclipse, Vortex, Lunar, Cobra, Viper. [source 1]
+- Offer structure: LUNAR ICON, Eclipse, Vortex, Lunar, Cobra, Viper [source 1]
+- LUNAR ICON [source 1]
 
-## What Stands Out
+## What stands out
 
-- The company addresses experienced keepers and buyers who need goalkeeper-glove
-  selection guidance. [source 1]
-- Contact latex and grip performance in both wet and dry conditions are central
-  product differentiators. [source 1]
-- Durability tradeoffs should be surfaced when product pages state that softer
-  professional latex favors elite performance over ruggedness. [source 2]
+- The company addresses experienced keepers and buyers who need goalkeeper-glove selection guidance. [source 1]
+- Contact latex and grip performance in both wet and dry conditions are central product differentiators. [source 1]
+- Durability: 3/5 – Because this latex is professional-grade and very soft, it is more delicate than "hard" training foams. You are choosing elite performance over long-term ruggedness. [source 2]
 
-## Customer Trust And Recent Activity
+## Customer trust and recent activity
 
-- Data unavailable unless validated public social proof, dated announcements, or
-  independent trust signals are collected.
+- Instagram profile solo_gk_ shows 3,591 followers. [source 5]
+- Instagram profile solo_gk_ shows 573 posts. [source 5]
+- Review of our new Relic glove 🧤 [source 6]
 
 ## Evidence Gaps
 
-- No strong public proof or trust evidence was found.
-- No dated recent activity or hiring evidence was verified.
+- Technical depth and integrations remain unclear.
+- No dated recent activity was verified.
+
+## Sources
+
+- [1] sologk.com/: https://sologk.com/
+- [2] LUNAR 2 – SOLOGK.COM: https://sologk.com/products/lunar-2
+- [3] About Solo – SOLOGK.COM: https://sologk.com/pages/about-solo
+- [4] LUNAR 2 - PURPLE – SOLOGK.COM: https://sologk.com/products/lunar-2-purple
+- [5] www.instagram.com/solo_gk_: https://www.instagram.com/solo_gk_
+- [6] www.instagram.com/p/DULcfsaDMNY: https://www.instagram.com/p/DULcfsaDMNY/
 
 ## Baseline Inventory
 
-- Product and collection separation is required.
-- Public catalog product count is required when the feed or product listing pages
-  are available.
+- Normalized facts: 92
+- Product-price offers: 8
 - AI status: disabled

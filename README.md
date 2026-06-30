@@ -33,9 +33,14 @@ public interface. For a public VPS behind HTTPS, set these in your
 APP_ENV="production"
 APP_BASE_URL="https://your-domain.example"
 SESSION_COOKIE_SECURE="true"
+CSRF_PROTECTION_ENABLED="true"
+LEGACY_SYNC_POST_ENABLED="false"
+RENDERED_BROWSER_ENABLED="false"
 AUTH_SECRET="replace-with-a-long-random-string"
 POSTGRES_PASSWORD="replace-with-a-new-long-random-password"
-DATABASE_URL="postgresql://competitor:replace-with-a-new-long-random-password@postgres:5432/competitor_brief"
+# Optional: usually leave COMPOSE_DATABASE_URL unset so Compose uses
+# postgresql://competitor:<password>@postgres:5432/competitor_brief internally.
+COMPOSE_DATABASE_URL=""
 ```
 
 Do not expose the backend container directly on `0.0.0.0:8000` unless you are
@@ -87,10 +92,11 @@ The backend runs normally without that key and omits AI analysis.
 ### First Admin User
 
 The app now requires login before testers can create, view, or download reports.
-Seed the first admin by setting these values in your ignored local `.env` file
-before the first startup:
+For local auth, seed the first admin by setting these values in your ignored
+local `.env` file before the first startup:
 
 ```dotenv
+AUTH_PROVIDER="local"
 AUTH_SECRET="replace-with-a-long-random-string"
 USER_REPOSITORY="postgres"
 SESSION_COOKIE_SECURE="true"
@@ -102,6 +108,45 @@ ADMIN_PASSWORD="temporary-strong-password"
 When the user table is empty, the app creates this admin account automatically.
 After login, open `/tools/competitor-brief/admin` to create named tester accounts
 with name, email, password, and role.
+
+### Supabase Beta Auth
+
+For public beta, Supabase is used for identity and production Postgres while
+FastAPI keeps session cookies, CSRF, role checks, ownership checks, job limits,
+credits, and report generation.
+
+```dotenv
+APP_NAME="business_tools"
+AUTH_PROVIDER="supabase"
+SUPABASE_URL="https://kacanssleoyrhnujavxc.supabase.co"
+SUPABASE_ANON_KEY="your-anon-key"
+SUPABASE_SERVICE_ROLE_KEY="server-side-service-role-key"
+SUPABASE_DB_URL="postgresql://postgres:[YOUR-PASSWORD]@db.kacanssleoyrhnujavxc.supabase.co:5432/postgres"
+JOB_REPOSITORY="postgres"
+USER_REPOSITORY="postgres"
+CREDIT_REPOSITORY="postgres"
+DATABASE_URL="${SUPABASE_DB_URL}"
+SIGNUP_FREE_CREDITS="2"
+BETA_STARTING_CREDITS="0"
+CAPTCHA_SITE_KEY="your-turnstile-site-key"
+```
+
+Keep `SUPABASE_SERVICE_ROLE_KEY` server-side only. Do not render it in templates
+or frontend JavaScript. The backend creates Supabase Auth users through the admin
+API. Public signup uses Supabase email/password signup, sends Supabase's email
+verification, stores inactive app metadata, and grants `SIGNUP_FREE_CREDITS`
+only after the first verified login. The backend then signs users into the
+existing FastAPI session cookie.
+
+The app initializes these application tables when the repositories start:
+
+- `app_users`: app user id, Supabase user id, email, name, role, active flag,
+  cached credit balance, and JSON payload.
+- `credit_ledger`: immutable grants and successful AI-report charges.
+- Existing job, feedback, rate-limit, and artifact columns.
+
+If Supabase requires SSL or transaction-pooler behavior for your deployment, use
+the Supabase direct or pooler Postgres URL as `SUPABASE_DB_URL`/`DATABASE_URL`.
 
 Internal tester safety limits are enabled by default:
 
@@ -115,6 +160,16 @@ POSTGRES_POOL_MAX_SIZE="8"
 
 These protect browser rendering, AI, Apify, and database resources during early
 testing. Raise them only after you know the VPS capacity and API spend.
+
+Credit rules for beta:
+
+- Self-signup grants 2 credits after email verification.
+- Free deterministic reports do not require or spend credits.
+- AI analysis requires at least one credit before job admission.
+- One credit is deducted only after AI analysis succeeds (`ok` or `cache_hit`).
+- Failed AI, validation-blocked AI, budget-blocked AI, provider failures, and
+  failed jobs are not charged.
+- The ledger is append-only so tester balance disputes can be audited.
 
 To enable optional Apify enrichment, add:
 
@@ -208,9 +263,9 @@ Users choose the report type for each scan:
 - **AI analysis:** requests cited strategic analysis after validation and is priced
   as one credit.
 
-The job stores this choice and the workflow obeys it. Credit balance management and
-deduction are not implemented yet; those require the future authentication and
-billing layer. A credit should only be deducted after AI analysis succeeds.
+The job stores this choice and the workflow obeys it. Credit balance management is
+implemented with a ledger; AI reports are admitted only when a credit is available
+and the credit is charged after successful AI analysis.
 
 Operational AI details are intentionally hidden from customer dossiers. The admin
 dashboard at `/tools/competitor-brief/admin` is restricted to admin users and shows
@@ -362,9 +417,13 @@ The full architectural rationale and extension points are documented in
 The local JSON job store is intended for development and low-volume single-worker use.
 
 Set `JOB_REPOSITORY=postgres`, `USER_REPOSITORY=postgres`, and `DATABASE_URL` to use
-Postgres for both jobs and users. The schemas are initialized when the application
-starts. Job ownership is enforced through the signed login session; users can only
-see their own library, reports, downloads, feedback, and deletes.
+Postgres for both jobs and users when running the backend directly on the host.
+Docker Compose sets the backend container database URL to the internal
+`postgres:5432` service by default; override it with `COMPOSE_DATABASE_URL` only
+when you intentionally want the container to connect somewhere else. The schemas
+are initialized when the application starts. Job ownership is enforced through the
+signed login session; users can only see their own library, reports, downloads,
+feedback, and deletes.
 
 When running only Postgres through Compose for a non-Docker backend, it uses
 isolated host port `54329`:

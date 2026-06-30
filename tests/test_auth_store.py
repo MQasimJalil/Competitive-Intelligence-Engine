@@ -15,6 +15,7 @@ def test_file_user_store_creates_named_users_and_verifies_passwords(tmp_path):
         email="qasim@example.com",
         password="correct horse battery staple",
         role="admin",
+        credit_balance=10,
     )
 
     saved = store.get_by_email("QASIM@example.com")
@@ -22,6 +23,8 @@ def test_file_user_store_creates_named_users_and_verifies_passwords(tmp_path):
     assert saved.user_id == user.user_id
     assert saved.name == "Qasim Tester"
     assert saved.role == "admin"
+    assert saved.credit_balance == 10
+    assert saved.is_active is True
     assert verify_password("correct horse battery staple", saved.password_hash)
     assert not verify_password("wrong password", saved.password_hash)
 

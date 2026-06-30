@@ -137,6 +137,29 @@ class Settings:
     local_owner_id: str = os.getenv("LOCAL_OWNER_ID", "local-development-user")
     user_store_dir: str = os.getenv("USER_STORE_DIR", "var/users")
     user_repository: str = os.getenv("USER_REPOSITORY", os.getenv("JOB_REPOSITORY", "file"))
+    auth_provider: str = field(
+        default_factory=lambda: os.getenv("AUTH_PROVIDER", "local").strip().casefold()
+    )
+    supabase_url: str = field(default_factory=lambda: os.getenv("SUPABASE_URL", ""))
+    supabase_anon_key: str = field(default_factory=lambda: os.getenv("SUPABASE_ANON_KEY", ""))
+    supabase_service_role_key: str = field(
+        default_factory=lambda: os.getenv("SUPABASE_SERVICE_ROLE_KEY", "")
+    )
+    supabase_jwt_secret: str = field(default_factory=lambda: os.getenv("SUPABASE_JWT_SECRET", ""))
+    supabase_db_url: str = field(default_factory=lambda: os.getenv("SUPABASE_DB_URL", ""))
+    captcha_site_key: str = field(default_factory=lambda: os.getenv("CAPTCHA_SITE_KEY", ""))
+    signup_free_credits: int = field(
+        default_factory=lambda: _int_env("SIGNUP_FREE_CREDITS", 2, minimum=0)
+    )
+    beta_starting_credits: int = field(
+        default_factory=lambda: _int_env("BETA_STARTING_CREDITS", 0, minimum=0)
+    )
+    credit_repository: str = field(
+        default_factory=lambda: os.getenv("CREDIT_REPOSITORY", "file")
+    )
+    credit_store_dir: str = field(
+        default_factory=lambda: os.getenv("CREDIT_STORE_DIR", "var/credits")
+    )
     auth_secret: str = os.getenv("AUTH_SECRET", "dev-insecure-change-me")
     session_cookie_name: str = os.getenv("SESSION_COOKIE_NAME", "competitor_brief_session")
     session_cookie_secure: bool = field(default_factory=_session_cookie_secure)

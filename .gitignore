@@ -94,12 +94,14 @@ postgres-data/
 docker-data/
 compose.override.yaml
 docker-compose.override.yml
+skills-lock.json
 
 # Local planning and assistant workspace files
 plan.md
 .agents/
 .codex/
 docs/superpowers/
+.gemini/
 
 # OS / editor
 .DS_Store

@@ -3,6 +3,7 @@ import re
 from dataclasses import replace
 
 from app.auth.store import FileUserStore
+from app.credits.store import FileCreditStore
 from app.jobs.store import FileJobStore
 from app.main import app
 from app.schemas import (
@@ -40,9 +41,16 @@ def _create_logged_in_client(monkeypatch, tmp_path, *, role="tester"):
         role=role,
     )
     client = TestClient(app)
+    page = client.get("/auth/login")
+    match = re.search(r'name="csrf_token" value="([^"]+)"', page.text)
+    csrf_token = match.group(1) if match else ""
     client.post(
         "/auth/login",
-        data={"email": "tester@example.com", "password": "tester-password"},
+        data={
+            "email": "tester@example.com",
+            "password": "tester-password",
+            "csrf_token": csrf_token,
+        },
         follow_redirects=False,
     )
     return client, user
@@ -180,14 +188,17 @@ def test_job_creation_accepts_csrf_token_when_enabled(tmp_path, monkeypatch):
 
 def test_create_job_passes_ai_choice_to_workflow(tmp_path, monkeypatch):
     store = FileJobStore(tmp_path)
+    credits = FileCreditStore(tmp_path / "credits")
     requests = []
 
     async def capture(job_id, domain, enable_ai):
         requests.append((job_id, domain, enable_ai))
 
     monkeypatch.setattr(router_module, "job_store", store)
+    monkeypatch.setattr(router_module, "credit_store", credits)
     monkeypatch.setattr(router_module, "_run_persisted_job", capture)
     client, user = _create_logged_in_client(monkeypatch, tmp_path)
+    credits.grant(user_id=user.user_id, amount=1, reason="beta_grant")
 
     response = client.post(
         "/tools/competitor-brief/jobs",
@@ -199,6 +210,36 @@ def test_create_job_passes_ai_choice_to_workflow(tmp_path, monkeypatch):
     assert job.owner_id == user.user_id
     assert job.ai_requested is True
     assert requests == [(job.job_id, "example.com", True)]
+
+
+def test_create_ai_job_requires_available_credit(tmp_path, monkeypatch):
+    store = FileJobStore(tmp_path / "jobs")
+    credit_store = FileCreditStore(tmp_path / "credits")
+    monkeypatch.setattr(router_module, "job_store", store)
+    monkeypatch.setattr(router_module, "credit_store", credit_store)
+    client, _user = _create_logged_in_client(monkeypatch, tmp_path)
+
+    response = client.post(
+        "/tools/competitor-brief/jobs",
+        data={"domain": "example.com", "enable_ai": "true"},
+    )
+
+    assert response.status_code == 402
+    assert "credit" in response.json()["detail"].lower()
+    assert store.list_all() == []
+
+
+def test_create_free_job_does_not_require_credit(tmp_path, monkeypatch):
+    store = FileJobStore(tmp_path / "jobs")
+    credit_store = FileCreditStore(tmp_path / "credits")
+    monkeypatch.setattr(router_module, "job_store", store)
+    monkeypatch.setattr(router_module, "credit_store", credit_store)
+    client, user = _create_logged_in_client(monkeypatch, tmp_path)
+
+    response = client.post("/tools/competitor-brief/jobs", data={"domain": "example.com"})
+
+    assert response.status_code == 200
+    assert store.get(response.json()["job_id"]).owner_id == user.user_id
 
 
 def test_create_job_returns_clear_error_for_invalid_domain(tmp_path, monkeypatch):
@@ -248,6 +289,51 @@ def test_create_job_enforces_rate_limit(tmp_path, monkeypatch):
         )
 
     monkeypatch.setattr(router_module, "_enforce_job_start_limits", block_start)
+    client, _user = _create_logged_in_client(monkeypatch, tmp_path)
+
+    response = client.post("/tools/competitor-brief/jobs", data={"domain": "example.com"})
+
+    assert response.status_code == 429
+    assert "Too many reports started" in response.json()["detail"]
+
+
+def test_file_job_creation_enforces_global_concurrency_limit(tmp_path, monkeypatch):
+    store = FileJobStore(tmp_path)
+    monkeypatch.setattr(router_module, "job_store", store)
+    monkeypatch.setattr(router_module.job_start_limiter, "allow", lambda user_id: True)
+    monkeypatch.setattr(
+        router_module,
+        "settings",
+        replace(
+            router_module.settings,
+            job_user_concurrency_limit=10,
+            job_global_concurrency_limit=1,
+        ),
+    )
+    client, _user = _create_logged_in_client(monkeypatch, tmp_path)
+    existing = store.create("already-running.example", owner_id="another-user")
+    existing.status = JobStatus.RUNNING
+    store.save(existing)
+
+    response = client.post("/tools/competitor-brief/jobs", data={"domain": "example.com"})
+
+    assert response.status_code == 429
+    assert "queue is full" in response.json()["detail"]
+
+
+def test_file_job_creation_enforces_start_rate_limiter(tmp_path, monkeypatch):
+    store = FileJobStore(tmp_path)
+    monkeypatch.setattr(router_module, "job_store", store)
+    monkeypatch.setattr(router_module.job_start_limiter, "allow", lambda user_id: False)
+    monkeypatch.setattr(
+        router_module,
+        "settings",
+        replace(
+            router_module.settings,
+            job_user_concurrency_limit=10,
+            job_global_concurrency_limit=10,
+        ),
+    )
     client, _user = _create_logged_in_client(monkeypatch, tmp_path)
 
     response = client.post("/tools/competitor-brief/jobs", data={"domain": "example.com"})
@@ -326,6 +412,63 @@ def test_failed_research_job_persists_user_facing_reason(tmp_path, monkeypatch):
     assert saved.status.value == "failed"
     assert saved.error == snapshot.failure_reason
     assert saved.has_snapshot
+
+
+def test_successful_ai_job_deducts_one_credit_after_artifacts_are_saved(tmp_path, monkeypatch):
+    store = FileJobStore(tmp_path / "jobs")
+    user_store = FileUserStore(tmp_path / "users")
+    credit_store = FileCreditStore(tmp_path / "credits")
+    credit_store.grant(user_id="owner-1", amount=1, reason="beta_grant")
+    user = user_store.create_user(
+        name="Owner One",
+        email="owner@example.com",
+        password="owner-password",
+        credit_balance=1,
+    )
+    user.user_id = "owner-1"
+    user_store.save(user)
+    job = store.create("example.com", owner_id="owner-1", ai_requested=True)
+    workflow = WorkflowRun(domain="example.com")
+    workflow.advance(WorkflowState.SCRAPING)
+    workflow.advance(WorkflowState.CLASSIFYING)
+    workflow.advance(WorkflowState.EXTRACTING)
+    workflow.advance(WorkflowState.VALIDATING)
+    workflow.advance(WorkflowState.COMPLETE)
+    snapshot = CompetitorSnapshot(
+        domain="example.com",
+        homepage="https://example.com/",
+        results=[],
+        ai_analysis_status="ok",
+        ai_run={
+            "status": "ok",
+            "failure_code": "",
+            "strategy": "structured_output",
+            "attempt_count": 1,
+            "provider": "openrouter",
+            "model": "qwen/test",
+            "prompt_version": "v1",
+            "schema_version": "analysis-v1",
+            "usage": {"total_tokens": 420, "estimated_cost_usd": 0.02},
+            "message": "",
+        },
+        workflow=workflow,
+    )
+
+    async def successful_snapshot(*args, **kwargs):
+        return snapshot
+
+    monkeypatch.setattr(router_module, "job_store", store)
+    monkeypatch.setattr(router_module, "user_store", user_store)
+    monkeypatch.setattr(router_module, "credit_store", credit_store)
+    monkeypatch.setattr(router_module, "build_preview_snapshot", successful_snapshot)
+    monkeypatch.setattr(router_module, "render_full_dossier_bytes", lambda report: b"%PDF")
+    monkeypatch.setattr(router_module, "render_evidence_appendix_bytes", lambda profile: b"%PDF")
+
+    asyncio.run(router_module._run_persisted_job(job.job_id, job.domain, True))
+
+    assert credit_store.balance_for_user("owner-1") == 0
+    assert user_store.get("owner-1").credit_balance == 0
+    assert len(credit_store.list_for_job(job.job_id)) == 1
 
 
 def test_history_lists_local_owner_jobs_only(tmp_path, monkeypatch):

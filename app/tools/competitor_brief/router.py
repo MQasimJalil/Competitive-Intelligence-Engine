@@ -7,6 +7,7 @@ from fastapi.templating import Jinja2Templates
 
 from app.auth import user_store
 from app.config import settings
+from app.credits import credit_store
 from app.jobs import JobStartLimiter, job_store
 from app.jobs.store import JobAdmissionError
 from app.reporting.dossier_pdf import render_full_dossier_bytes
@@ -63,7 +64,7 @@ def competitor_brief_admin(request: Request, tab: str = "dashboard"):
     web_auth.require_admin(request)
     job_store.recover_stale(settings.job_stale_after_seconds)
     active_tab = tab if tab in {"dashboard", "users", "usage"} else "dashboard"
-    summary, users = build_admin_view(job_store, user_store)
+    summary, users = build_admin_view(job_store, user_store, credit_store)
     return templates.TemplateResponse(
         request,
         "tools/competitor_brief_admin.html",
@@ -90,9 +91,21 @@ def create_admin_user(
     web_auth.require_admin(request)
     require_csrf(request, csrf_token)
     try:
-        user_store.create_user(name=name, email=email, password=password, role=role)
+        user = user_store.create_user(
+            name=name,
+            email=email,
+            password=password,
+            role=role,
+            credit_balance=settings.beta_starting_credits,
+        )
+        if settings.beta_starting_credits > 0:
+            credit_store.grant(
+                user_id=user.user_id,
+                amount=settings.beta_starting_credits,
+                reason="beta_grant",
+            )
     except ValueError as exc:
-        summary, users = build_admin_view(job_store, user_store)
+        summary, users = build_admin_view(job_store, user_store, credit_store)
         return templates.TemplateResponse(
             request,
             "tools/competitor_brief_admin.html",
@@ -120,7 +133,7 @@ def update_ai_engine(
     try:
         set_ai_analysis_engine(ai_analysis_engine)
     except ValueError as exc:
-        summary, users = build_admin_view(job_store, user_store)
+        summary, users = build_admin_view(job_store, user_store, credit_store)
         return templates.TemplateResponse(
             request,
             "tools/competitor_brief_admin.html",
@@ -261,6 +274,7 @@ async def _run_persisted_job(job_id: str, domain: str, enable_ai: bool) -> None:
                 snapshot.business_profile or NormalizedBusinessProfile(domain=snapshot.domain)
             ),
         )
+        _charge_successful_ai_report(job_id, enable_ai, snapshot.ai_analysis_status)
     except Exception as exc:
         error = f"{type(exc).__name__}: {exc}"
         job = job_store.get(job_id)
@@ -386,6 +400,11 @@ def _enforce_job_start_limits(owner_id: str) -> None:
 
 def _create_job_with_admission(domain: str, owner_id: str, enable_ai: bool):
     job_store.recover_stale(settings.job_stale_after_seconds)
+    if enable_ai and credit_store.balance_for_user(owner_id) < 1:
+        raise HTTPException(
+            status_code=402,
+            detail="AI analysis requires at least 1 available credit.",
+        )
     create_admitted = getattr(job_store, "create_admitted", None)
     if create_admitted is not None:
         try:
@@ -401,7 +420,6 @@ def _create_job_with_admission(domain: str, owner_id: str, enable_ai: bool):
         except JobAdmissionError as exc:
             raise HTTPException(status_code=429, detail=str(exc)) from exc
     _enforce_job_start_limits(owner_id)
-    return job_store.create(domain, owner_id=owner_id, ai_requested=enable_ai)
     if _active_job_count(job_store.list_all()) >= settings.job_global_concurrency_limit:
         raise HTTPException(
             status_code=429,
@@ -412,6 +430,23 @@ def _create_job_with_admission(domain: str, owner_id: str, enable_ai: bool):
             status_code=429,
             detail="Too many reports started recently. Wait a minute and try again.",
         )
+    return job_store.create(domain, owner_id=owner_id, ai_requested=enable_ai)
+
+
+def _charge_successful_ai_report(job_id: str, enable_ai: bool, ai_analysis_status: str) -> None:
+    if not enable_ai or ai_analysis_status not in {"ok", "cache_hit"}:
+        return
+    job = job_store.get(job_id)
+    if job is None:
+        return
+    entry = credit_store.spend_successful_ai_report(user_id=job.owner_id, job_id=job_id)
+    if entry is None:
+        return
+    user = user_store.get(job.owner_id)
+    if user is None:
+        return
+    user.credit_balance = max(0, user.credit_balance + entry.amount)
+    user_store.save(user)
 
 
 def _active_job_count(jobs) -> int:

@@ -1,6 +1,6 @@
 {
   "domain": "sologk.com",
-  "required_fact_recall": 0.8,
+  "required_fact_recall": 0.6667,
   "important_fact_recall": 1.0,
   "forbidden_claim_avoidance": 1.0,
   "citation_reference_validity": 1.0,
@@ -12,12 +12,17 @@
     },
     {
       "fact": "Its product architecture includes Eclipse, Lunar, Vortex, Cobra, and Viper collections.",
-      "coverage": 0.6667,
+      "coverage": 0.7778,
       "matched": true
     },
     {
+      "fact": "The public shop lists about 20 actual product items and these must be separated from collection/category names.",
+      "coverage": 0.1538,
+      "matched": false
+    },
+    {
       "fact": "Visible featured prices span GBP 25 to GBP 40.",
-      "coverage": 0.2,
+      "coverage": 0.4,
       "matched": false
     },
     {

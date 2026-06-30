@@ -27,6 +27,8 @@ class AdminUserRollup:
     name: str
     email: str
     role: str
+    is_active: bool
+    credit_balance: int
     total_reports: int
     complete_reports: int
     partial_reports: int
@@ -41,7 +43,11 @@ class AdminUserRollup:
         return self.total_ai_cost_usd + self.total_apify_cost_usd
 
 
-def build_admin_view(job_store, user_store=None) -> tuple[AdminSummary, list[AdminUserRollup]]:
+def build_admin_view(
+    job_store,
+    user_store=None,
+    credit_store=None,
+) -> tuple[AdminSummary, list[AdminUserRollup]]:
     jobs = job_store.list_all()
     user_summaries = _user_summaries(user_store)
     snapshots = {
@@ -54,11 +60,11 @@ def build_admin_view(job_store, user_store=None) -> tuple[AdminSummary, list[Adm
         by_owner.setdefault(job.owner_id, []).append(job)
 
     users = [
-        _rollup(owner_id, owner_jobs, snapshots, user_summaries.get(owner_id))
+        _rollup(owner_id, owner_jobs, snapshots, user_summaries.get(owner_id), credit_store)
         for owner_id, owner_jobs in sorted(by_owner.items())
     ]
     users.extend(
-        _empty_rollup(summary)
+        _empty_rollup(summary, credit_store)
         for user_id, summary in sorted(user_summaries.items())
         if user_id not in by_owner
     )
@@ -86,12 +92,15 @@ def _rollup(
     jobs: list[CompetitorJob],
     snapshots: dict[str, CompetitorSnapshot | None],
     user: UserSummary | None,
+    credit_store,
 ) -> AdminUserRollup:
     return AdminUserRollup(
         owner_id=owner_id,
         name=user.name if user else owner_id,
         email=user.email if user else "",
         role=user.role if user else "tester",
+        is_active=user.is_active if user else True,
+        credit_balance=_credit_balance(user, credit_store),
         total_reports=len(jobs),
         complete_reports=sum(job.status.value == "complete" for job in jobs),
         partial_reports=sum(job.status.value == "partial" for job in jobs),
@@ -107,12 +116,14 @@ def _rollup(
     )
 
 
-def _empty_rollup(user: UserSummary) -> AdminUserRollup:
+def _empty_rollup(user: UserSummary, credit_store) -> AdminUserRollup:
     return AdminUserRollup(
         owner_id=user.user_id,
         name=user.name,
         email=user.email,
         role=user.role,
+        is_active=user.is_active,
+        credit_balance=_credit_balance(user, credit_store),
         total_reports=0,
         complete_reports=0,
         partial_reports=0,
@@ -128,6 +139,14 @@ def _user_summaries(user_store) -> dict[str, UserSummary]:
     if user_store is None:
         return {}
     return {user.user_id: user for user in user_store.list_users()}
+
+
+def _credit_balance(user: UserSummary | None, credit_store) -> int:
+    if user is None:
+        return 0
+    if credit_store is None:
+        return user.credit_balance
+    return credit_store.balance_for_user(user.user_id)
 
 
 def _ai_status(snapshot: CompetitorSnapshot | None) -> str:

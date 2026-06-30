@@ -54,3 +54,25 @@ def test_job_guardrail_defaults_are_enabled_for_internal_testing(monkeypatch):
     assert settings.job_rate_limit_max_per_window > 0
     assert settings.job_user_concurrency_limit > 0
     assert settings.job_global_concurrency_limit > 0
+
+
+def test_supabase_auth_and_credit_configuration(monkeypatch):
+    monkeypatch.setenv("AUTH_PROVIDER", "supabase")
+    monkeypatch.setenv("SUPABASE_URL", "https://project.supabase.co")
+    monkeypatch.setenv("SUPABASE_ANON_KEY", "anon-key")
+    monkeypatch.setenv("SUPABASE_SERVICE_ROLE_KEY", "service-role-key")
+    monkeypatch.setenv("SUPABASE_JWT_SECRET", "jwt-secret")
+    monkeypatch.setenv("SUPABASE_DB_URL", "postgresql://supabase")
+    monkeypatch.setenv("BETA_STARTING_CREDITS", "7")
+    monkeypatch.setenv("CREDIT_REPOSITORY", "postgres")
+
+    settings = Settings()
+
+    assert settings.auth_provider == "supabase"
+    assert settings.supabase_url == "https://project.supabase.co"
+    assert settings.supabase_anon_key == "anon-key"
+    assert settings.supabase_service_role_key == "service-role-key"
+    assert settings.supabase_jwt_secret == "jwt-secret"
+    assert settings.supabase_db_url == "postgresql://supabase"
+    assert settings.beta_starting_credits == 7
+    assert settings.credit_repository == "postgres"

@@ -101,6 +101,23 @@ def test_logged_in_header_includes_accessible_mobile_menu(tmp_path, monkeypatch)
     assert "Menu" in response.text
 
 
+def test_logged_in_header_shows_credit_balance(tmp_path, monkeypatch):
+    user_store, _job_store = _configure_auth(monkeypatch, tmp_path)
+    user_store.create_user(
+        name="Tester One",
+        email="tester@example.com",
+        password="tester-password",
+        credit_balance=2,
+    )
+    client = TestClient(app)
+    _login(client, "tester@example.com", "tester-password")
+
+    response = client.get("/tools/competitor-brief")
+
+    assert response.status_code == 200
+    assert "2 credits" in response.text
+
+
 def test_login_page_explains_private_beta_and_support_path(monkeypatch):
     monkeypatch.setattr(
         web_auth,
@@ -120,6 +137,136 @@ def test_login_page_explains_private_beta_and_support_path(monkeypatch):
     assert "Forgot password" in response.text
     assert "mailto:owner@example.com" in response.text
     assert "Public pages only" in response.text
+
+
+class SignupStore:
+    def __init__(self):
+        self.calls = []
+
+    def signup(self, *, email, phone_number, password, captcha_token):
+        self.calls.append((email, phone_number, password, captcha_token))
+
+
+def test_signup_page_collects_email_phone_password_and_captcha(monkeypatch):
+    monkeypatch.setattr(
+        web_auth,
+        "settings",
+        replace(
+            web_auth.settings,
+            auth_provider="supabase",
+            captcha_site_key="site-key",
+        ),
+    )
+    client = TestClient(app)
+
+    response = client.get("/auth/signup")
+
+    assert response.status_code == 200
+    assert 'name="email"' in response.text
+    assert 'name="phone_number"' in response.text
+    assert 'name="password"' in response.text
+    assert 'name="confirm_password"' in response.text
+    assert 'class="h-captcha"' in response.text
+
+
+def test_signup_posts_to_supabase_store_with_captcha(monkeypatch):
+    signup_store = SignupStore()
+    monkeypatch.setattr(web_auth, "user_store", signup_store)
+    monkeypatch.setattr(
+        web_auth,
+        "settings",
+        replace(
+            web_auth.settings,
+            auth_provider="supabase",
+            captcha_site_key="site-key",
+        ),
+    )
+    client = TestClient(app)
+
+    response = client.post(
+        "/auth/signup",
+        data={
+            "email": "tester@example.com",
+            "phone_number": "+15551234567",
+            "password": "tester-password",
+            "confirm_password": "tester-password",
+            "h-captcha-response": "captcha-token",
+        },
+    )
+
+    assert response.status_code == 200
+    assert signup_store.calls == [
+        ("tester@example.com", "+15551234567", "tester-password", "captcha-token")
+    ]
+    assert "Check your email" in response.text
+
+
+class LoginStore:
+    def __init__(self):
+        self.calls = []
+
+    def authenticate(self, email, password, captcha_token=""):
+        self.calls.append((email, password, captcha_token))
+
+
+def test_login_posts_hcaptcha_token_to_supabase_store(monkeypatch):
+    login_store = LoginStore()
+    monkeypatch.setattr(web_auth, "user_store", login_store)
+    monkeypatch.setattr(
+        web_auth,
+        "settings",
+        replace(
+            web_auth.settings,
+            auth_provider="supabase",
+            captcha_site_key="site-key",
+        ),
+    )
+    client = TestClient(app)
+
+    response = client.post(
+        "/auth/login",
+        data={
+            "email": "tester@example.com",
+            "password": "tester-password",
+            "h-captcha-response": "captcha-token",
+        },
+    )
+
+    assert response.status_code == 400
+    assert login_store.calls == [
+        ("tester@example.com", "tester-password", "captcha-token")
+    ]
+
+
+class CaptchaFailureLoginStore:
+    def authenticate(self, email, password, captcha_token=""):
+        raise ValueError("Captcha verification failed.")
+
+
+def test_login_shows_captcha_failure_from_supabase(monkeypatch):
+    monkeypatch.setattr(web_auth, "user_store", CaptchaFailureLoginStore())
+    monkeypatch.setattr(
+        web_auth,
+        "settings",
+        replace(
+            web_auth.settings,
+            auth_provider="supabase",
+            captcha_site_key="site-key",
+        ),
+    )
+    client = TestClient(app)
+
+    response = client.post(
+        "/auth/login",
+        data={
+            "email": "tester@example.com",
+            "password": "tester-password",
+            "h-captcha-response": "captcha-token",
+        },
+    )
+
+    assert response.status_code == 400
+    assert "Captcha verification failed" in response.text
 
 
 def test_non_admin_cannot_open_admin_dashboard(tmp_path, monkeypatch):
@@ -303,3 +450,25 @@ def test_admin_cannot_open_another_users_report_by_job_id(tmp_path, monkeypatch)
 
     assert response.status_code == 404
     assert "private-target.example" not in response.text
+
+
+def test_deactivated_user_session_is_rejected(tmp_path, monkeypatch):
+    user_store, _job_store = _configure_auth(monkeypatch, tmp_path)
+    user = user_store.create_user(
+        name="Deactivated Tester",
+        email="deactivated@example.com",
+        password="tester-password",
+    )
+    client = TestClient(app)
+    # Log in first to acquire a valid session cookie
+    login_response = _login(client, "deactivated@example.com", "tester-password")
+    assert login_response.status_code == 303
+
+    # Deactivate the user in the database
+    user.is_active = False
+    user_store.save(user)
+
+    # Try to access an authenticated route
+    response = client.get("/tools/competitor-brief/history", follow_redirects=False)
+    assert response.status_code == 303
+    assert response.headers["location"].startswith("/auth/login")
